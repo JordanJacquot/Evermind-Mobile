@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icône provisoire : un calendrier cyan (zone sûre de 66 dp au centre des 108 dp) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@color/cyan"
+        android:strokeWidth="4"
+        android:pathData="M36,38 L72,38 Q76,38 76,42 L76,72 Q76,76 72,76 L36,76 Q32,76 32,72 L32,42 Q32,38 36,38 Z" />
+    <path
+        android:fillColor="@color/cyan"
+        android:pathData="M32,42 Q32,38 36,38 L72,38 Q76,38 76,42 L76,50 L32,50 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="@color/cyan"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:pathData="M43,32 L43,42 M65,32 L65,42" />
+    <path
+        android:fillColor="@color/cyan"
+        android:pathData="M48,59 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0 Z" />
+</vector>

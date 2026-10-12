@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 et avant : l'agenda fait partie de la sauvegarde du téléphone (chiffrée, sur le compte de l'utilisateur) -->
+<full-backup-content>
+    <include domain="database" path="." />
+    <include domain="sharedpref" path="." />
+</full-backup-content>

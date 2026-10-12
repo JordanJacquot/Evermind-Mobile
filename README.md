@@ -22,7 +22,27 @@ Tout reste sur le téléphone : la dictée, la voix et l'assistant tournent en l
 ## Développer
 
 Il faut [Android Studio](https://developer.android.com/studio) et un téléphone Android en mode développeur (ou l'émulateur d'Android Studio).
+Ouvrir le dossier dans Android Studio, attendre la synchronisation Gradle, puis ▶ (Run).
+
+- `gradlew assembleDebug` : construit `app/build/outputs/apk/debug/app-debug.apk`.
+- `gradlew test` : les tests (format des dates, compatibilité du fichier avec Evermind PC).
+- Android 8 minimum (`minSdk 26`), aucune permission Internet.
+
+### Où est quoi
+
+Le code est dans `app/src/main/java/io/github/jordanjacquot/evermind/` :
+
+- `donnees/` : le rendez-vous (`RendezVous`, mêmes champs que le `rendez-vous.json` d'Evermind PC), les sortes
+  (`Sorte`, mêmes codes, icônes et couleurs), la base Room et `DepotRendezVous`, seul passage pour lire et écrire.
+- `ui/agenda/` : l'écran principal (calendrier du mois, « À venir » ou le jour choisi).
+- `ui/fiche/` : la fiche d'un rendez-vous (détails, choses à préparer, supprimer).
+- `ui/formulaire/` : ajouter ou modifier à la main.
+- `ui/theme/` : couleurs ; `ui/Textes.kt` : dates et heures écrites en français (« demain à 15 h 30 ») ;
+  `ui/Navigation.kt` : les écrans et le passage de l'un à l'autre.
+
+Les étapes suivantes auront chacune leur dossier : `comprendre/` (2), `rappels/` (3), `voix/` (4), `assistant/` (5).
 
 ## État
 
-Le projet commence : pas encore de code.
+Étape 1 en cours : la structure du projet, l'agenda enregistré sur le téléphone et ses trois écrans.
+Les rendez-vous répétés ne s'affichent qu'à leur première fois (les suivantes viennent avec l'étape 2).
