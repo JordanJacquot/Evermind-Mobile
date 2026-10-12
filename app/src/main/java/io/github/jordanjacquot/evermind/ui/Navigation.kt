@@ -9,6 +9,7 @@ import androidx.navigation.navArgument
 import io.github.jordanjacquot.evermind.ui.agenda.AgendaEcran
 import io.github.jordanjacquot.evermind.ui.fiche.FicheEcran
 import io.github.jordanjacquot.evermind.ui.formulaire.FormulaireEcran
+import java.net.URLEncoder
 import java.time.LocalDate
 
 /** Les écrans de l'app et comment on passe de l'un à l'autre. */
@@ -20,6 +21,7 @@ fun EvermindNavigation() {
             AgendaEcran(
                 ouvrirFiche = { id -> nav.navigate("fiche/$id") },
                 ajouter = { jour -> nav.navigate("formulaire?jour=${jour ?: ""}") },
+                completer = { phrase -> nav.navigate("formulaire?phrase=${URLEncoder.encode(phrase, "UTF-8")}") },
             )
         }
         composable("fiche/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entree ->
@@ -31,15 +33,17 @@ fun EvermindNavigation() {
             )
         }
         composable(
-            "formulaire?id={id}&jour={jour}",
+            "formulaire?id={id}&jour={jour}&phrase={phrase}",
             arguments = listOf(
                 navArgument("id") { type = NavType.StringType; nullable = true; defaultValue = null },
                 navArgument("jour") { type = NavType.StringType; nullable = true; defaultValue = null },
+                navArgument("phrase") { type = NavType.StringType; nullable = true; defaultValue = null },
             ),
         ) { entree ->
             FormulaireEcran(
                 id = entree.arguments?.getString("id"),
                 jour = entree.arguments?.getString("jour")?.takeIf { it.isNotBlank() }?.let(LocalDate::parse),
+                phrase = entree.arguments?.getString("phrase"),
                 retour = { nav.popBackStack() },
             )
         }

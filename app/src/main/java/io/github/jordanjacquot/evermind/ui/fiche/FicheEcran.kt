@@ -39,6 +39,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.jordanjacquot.evermind.EvermindApp
 import io.github.jordanjacquot.evermind.donnees.RendezVous
 import io.github.jordanjacquot.evermind.donnees.Sorte
+import io.github.jordanjacquot.evermind.donnees.laRepetition
+import io.github.jordanjacquot.evermind.donnees.prochaineFoisDepuis
+import io.github.jordanjacquot.evermind.ui.enTexte
+import io.github.jordanjacquot.evermind.ui.rappelEnTexte
 import io.github.jordanjacquot.evermind.ui.majuscule
 import io.github.jordanjacquot.evermind.ui.quandEnTexte
 import io.github.jordanjacquot.evermind.ui.theme.teinte
@@ -77,9 +81,11 @@ fun FicheEcran(id: String, retour: () -> Unit, modifier: () -> Unit) {
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(top = 4.dp),
             )
-            Text(majuscule(r.quandEnTexte()), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
-            age(r)?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            if (r.repetition != null) Text("Se répète", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Pour un rendez-vous qui revient : la prochaine fois
+            val prochaine = r.prochaineFoisDepuis(LocalDate.now())?.debut ?: r.quand
+            Text(majuscule(r.quandEnTexte(prochaine)), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
+            age(r, prochaine.year)?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            r.laRepetition?.let { Text("↻ " + majuscule(it.enTexte()), color = MaterialTheme.colorScheme.onSurfaceVariant) }
 
             HorizontalDivider(Modifier.padding(vertical = 16.dp))
 
@@ -91,6 +97,7 @@ fun FicheEcran(id: String, retour: () -> Unit, modifier: () -> Unit) {
                 TextButton(onClick = { runCatching { uri.openUri(r.lien) } }) { Text("Ouvrir le lien") }
             }
             if (r.notes.isNotBlank()) Detail("Notes", r.notes)
+            r.rappels?.let { Detail("Rappels", if (it.isEmpty()) "aucun" else it.joinToString(", ") { c -> rappelEnTexte(c) }) }
             if (r.aPreparer.isNotEmpty()) {
                 Text("À préparer", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(top = 12.dp))
@@ -129,9 +136,8 @@ private fun Detail(nom: String, valeur: String) {
 }
 
 /** « 30 ans » pour un anniversaire dont on connaît l'année de naissance. */
-private fun age(r: RendezVous): String? {
+private fun age(r: RendezVous, annee: Int): String? {
     val naissance = r.naissance ?: return null
     if (r.sorte != Sorte.ANNIV) return null
-    val annee = maxOf(r.quand.year, LocalDate.now().year)
     return "${annee - naissance} ans"
 }

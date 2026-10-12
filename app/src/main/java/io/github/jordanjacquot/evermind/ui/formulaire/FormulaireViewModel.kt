@@ -2,6 +2,9 @@ package io.github.jordanjacquot.evermind.ui.formulaire
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.jordanjacquot.evermind.comprendre.lirePhrase
+import io.github.jordanjacquot.evermind.comprendre.titreAffiche
+import io.github.jordanjacquot.evermind.donnees.APreparer
 import io.github.jordanjacquot.evermind.donnees.DepotRendezVous
 import io.github.jordanjacquot.evermind.donnees.RendezVous
 import io.github.jordanjacquot.evermind.donnees.Sorte
@@ -36,6 +39,8 @@ class FormulaireViewModel(
     private val depot: DepotRendezVous,
     private val id: String?,
     jour: LocalDate?,
+    /** Une phrase écrite dans la barre, à laquelle il manquait quelque chose : ce qui a été compris pré-remplit le formulaire. */
+    phrase: String? = null,
 ) : ViewModel() {
     private val _brouillon = MutableStateFlow(Brouillon(jour = jour ?: LocalDate.now()))
     val brouillon: StateFlow<Brouillon> = _brouillon
@@ -44,6 +49,28 @@ class FormulaireViewModel(
     private var original: RendezVous? = null
 
     init {
+        if (phrase != null) {
+            val p = lirePhrase(phrase)
+            _brouillon.value = Brouillon(
+                titre = if (p.titre.isBlank()) "" else titreAffiche(p.titre),
+                sorte = Sorte.depuisCode(p.sorte),
+                jour = p.jour ?: jour ?: LocalDate.now(),
+                journee = p.journee,
+                heure = p.heure ?: Brouillon().heure,
+                lieu = p.lieu,
+                avec = p.avec.joinToString(", "),
+                lien = p.lien,
+                important = p.important,
+            )
+            // (les rappels, l'année de naissance et la liste à préparer ne sont pas dans le formulaire mais restent)
+            original = RendezVous(
+                titre = "",
+                quand = LocalDateTime.now(),
+                rappels = p.rappels,
+                naissance = p.naissance,
+                aPreparer = p.aPreparer.map { APreparer(it) },
+            )
+        }
         if (id != null) viewModelScope.launch {
             val r = depot.rendezVous(id).first() ?: return@launch
             original = r

@@ -18,9 +18,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -29,18 +32,31 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,21 +64,51 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.jordanjacquot.evermind.EvermindApp
-import io.github.jordanjacquot.evermind.donnees.RendezVous
+import io.github.jordanjacquot.evermind.comprendre.Manque
+import io.github.jordanjacquot.evermind.comprendre.lirePhrase
+import io.github.jordanjacquot.evermind.comprendre.message
+import io.github.jordanjacquot.evermind.comprendre.versRendezVous
+import io.github.jordanjacquot.evermind.donnees.Fois
+import io.github.jordanjacquot.evermind.donnees.laRepetition
 import io.github.jordanjacquot.evermind.ui.enTexte
 import io.github.jordanjacquot.evermind.ui.majuscule
 import io.github.jordanjacquot.evermind.ui.quandEnTexte
 import io.github.jordanjacquot.evermind.ui.theme.teinte
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 
 /** L'écran principal : le calendrier du mois, puis « À venir » ou les rendez-vous du jour choisi. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit) {
+fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, completer: (String) -> Unit) {
     val app = LocalContext.current.applicationContext as EvermindApp
     val vm = viewModel { AgendaViewModel(app.depot) }
     val etat by vm.etat.collectAsStateWithLifecycle()
+    val messages = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val focus = LocalFocusManager.current
+    var phrase by rememberSaveable { mutableStateOf("") }
+    var manque by remember { mutableStateOf<Manque?>(null) }
+
+    fun envoyer() {
+        if (phrase.isBlank()) return
+        when (val r = vm.ajouter(phrase)) {
+            is Ajout.Incomplet -> manque = r.manque
+            is Ajout.Fait -> {
+                phrase = ""
+                manque = null
+                focus.clearFocus()
+                val premier = r.rendezVous.first()
+                val quoi = if (r.rendezVous.size > 1) "${r.rendezVous.size} rendez-vous" else "${premier.sorte.icone} ${premier.titre}"
+                scope.launch {
+                    messages.currentSnackbarData?.dismiss()
+                    val choix = messages.showSnackbar("Ajouté : $quoi, ${premier.quandEnTexte()}", "Annuler", duration = SnackbarDuration.Long)
+                    if (choix == SnackbarResult.ActionPerformed) vm.annuler(r.rendezVous)
+                }
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -71,6 +117,7 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit) {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
+        snackbarHost = { SnackbarHost(messages) },
         floatingActionButton = {
             FloatingActionButton(onClick = { ajouter(etat.jourChoisi) }) {
                 Icon(Icons.Default.Add, contentDescription = "Ajouter un rendez-vous")
@@ -78,6 +125,15 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit) {
         },
     ) { marges ->
         LazyColumn(Modifier.fillMaxSize().padding(marges).padding(horizontal = 16.dp)) {
+            item {
+                Saisie(
+                    phrase = phrase,
+                    manque = manque,
+                    changer = { phrase = it; manque = null },
+                    envoyer = ::envoyer,
+                    completer = { completer(phrase); phrase = ""; manque = null },
+                )
+            }
             item {
                 Calendrier(
                     mois = etat.mois,
@@ -107,8 +163,8 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit) {
                     )
                 }
             }
-            items(etat.liste, key = { it.id }) { rdv ->
-                CarteRendezVous(rdv, onClick = { ouvrirFiche(rdv.id) })
+            items(etat.liste, key = { "${it.rendezVous.id}/${it.debut}" }) { f ->
+                CarteRendezVous(f, onClick = { ouvrirFiche(f.rendezVous.id) })
             }
             item { Spacer(Modifier.height(88.dp)) }   // de la place sous le bouton +
         }
@@ -119,7 +175,7 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit) {
 private fun Calendrier(
     mois: YearMonth,
     jourChoisi: LocalDate?,
-    parJour: Map<LocalDate, List<RendezVous>>,
+    parJour: Map<LocalDate, List<Fois>>,
     precedent: () -> Unit,
     suivant: () -> Unit,
     choisir: (LocalDate) -> Unit,
@@ -161,7 +217,7 @@ private fun Calendrier(
 }
 
 @Composable
-private fun CaseJour(jour: LocalDate, estAujourdHui: Boolean, estChoisi: Boolean, rdvs: List<RendezVous>, onClick: () -> Unit) {
+private fun CaseJour(jour: LocalDate, estAujourdHui: Boolean, estChoisi: Boolean, rdvs: List<Fois>, onClick: () -> Unit) {
     val couleurs = MaterialTheme.colorScheme
     val forme = RoundedCornerShape(10.dp)
     Column(
@@ -181,7 +237,7 @@ private fun CaseJour(jour: LocalDate, estAujourdHui: Boolean, estChoisi: Boolean
         )
         // Une pastille par sorte de rendez-vous ce jour-là (trois au plus)
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.padding(top = 2.dp).height(5.dp)) {
-            rdvs.map { it.sorte }.distinct().take(3).forEach {
+            rdvs.map { it.rendezVous.sorte }.distinct().take(3).forEach {
                 Box(Modifier.size(5.dp).clip(CircleShape).background(it.teinte))
             }
         }
@@ -189,7 +245,8 @@ private fun CaseJour(jour: LocalDate, estAujourdHui: Boolean, estChoisi: Boolean
 }
 
 @Composable
-fun CarteRendezVous(rdv: RendezVous, onClick: () -> Unit) {
+fun CarteRendezVous(f: Fois, onClick: () -> Unit) {
+    val rdv = f.rendezVous
     Card(
         onClick = onClick,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -206,9 +263,62 @@ fun CarteRendezVous(rdv: RendezVous, onClick: () -> Unit) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(rdv.quandEnTexte(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    rdv.quandEnTexte(f.debut) + if (rdv.repetition != null) "  ↻" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             if (rdv.fait) Text("✓", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.titleMedium)
+        }
+    }
+}
+
+/**
+ * La barre où l'on écrit un rendez-vous comme on le dirait (« mardi 15 h dentiste »).
+ * En dessous, ce qu'Evermind a compris, au fur et à mesure.
+ */
+@Composable
+private fun Saisie(phrase: String, manque: Manque?, changer: (String) -> Unit, envoyer: () -> Unit, completer: () -> Unit) {
+    val lue = remember(phrase) { if (phrase.isBlank()) null else lirePhrase(phrase) }
+    val rdvs = remember(lue) { lue?.versRendezVous().orEmpty() }
+    Column(Modifier.padding(bottom = 12.dp)) {
+        OutlinedTextField(
+            value = phrase,
+            onValueChange = changer,
+            placeholder = { Text("mardi 15 h dentiste, foot tous les lundis à 19 h...") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Send),
+            keyboardActions = KeyboardActions(onSend = { envoyer() }),
+            trailingIcon = {
+                IconButton(onClick = envoyer, enabled = phrase.isNotBlank()) {
+                    Icon(Icons.AutoMirrored.Filled.Send, "Ajouter")
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+        )
+        val couleurs = MaterialTheme.colorScheme
+        val petit = MaterialTheme.typography.bodySmall
+        when {
+            manque != null -> {
+                Text(manque.message, color = couleurs.error, style = petit, modifier = Modifier.padding(top = 6.dp, start = 4.dp))
+                if (manque == Manque.HEURE || manque == Manque.JOUR || manque == Manque.QUAND) {
+                    TextButton(onClick = completer) { Text("Compléter à la main") }
+                }
+            }
+            // Ce qui sera créé
+            rdvs.isNotEmpty() -> {
+                val rdv = rdvs.first()
+                val quand = rdv.laRepetition?.let { r -> majuscule(r.enTexte()) + ", dès " + rdv.quandEnTexte() } ?: rdv.quandEnTexte()
+                val plus = if (rdvs.size > 1) " (et ${rdvs.size - 1} autres)" else ""
+                Text("${rdv.sorte.icone} ${rdv.titre} : $quand$plus", color = couleurs.primary, style = petit,
+                    modifier = Modifier.padding(top = 6.dp, start = 4.dp))
+            }
+            // Ce qu'il manque encore
+            lue != null -> {
+                Text(lue.manque.message, color = couleurs.onSurfaceVariant, style = petit,
+                    modifier = Modifier.padding(top = 6.dp, start = 4.dp))
+            }
         }
     }
 }

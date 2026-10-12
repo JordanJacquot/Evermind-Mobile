@@ -33,6 +33,10 @@ private val Couleurs = darkColorScheme(
     surfaceContainer = Surface,
     surfaceContainerHigh = SurfaceHaute,
     error = Rouge,
+    // (les bandeaux en bas de l'écran, « Ajouté : ... Annuler »)
+    inverseSurface = SurfaceHaute,
+    inverseOnSurface = Texte,
+    inversePrimary = Cyan,
 )
 
 val Sorte.teinte: Color get() = Color(couleur)

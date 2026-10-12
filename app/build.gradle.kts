@@ -15,6 +15,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -31,6 +32,18 @@ android {
     }
     buildFeatures {
         compose = true
+    }
+
+    // Ce qui sert aux tests sur PC et sur le téléphone : la comparaison avec Evermind PC et ses phrases
+    sourceSets {
+        getByName("test") {
+            kotlin.directories += "src/sharedTest/java"
+            resources.srcDir("src/sharedTest/resources")
+        }
+        getByName("androidTest") {
+            kotlin.directories += "src/sharedTest/java"
+            assets.srcDir("src/sharedTest/resources")
+        }
     }
 }
 
@@ -60,4 +73,6 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
 }

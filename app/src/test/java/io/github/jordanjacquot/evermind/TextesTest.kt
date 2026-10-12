@@ -23,14 +23,14 @@ class TextesTest {
         assertEquals("aujourd'hui", lundi.enTexte(lundi))
         assertEquals("demain", lundi.plusDays(1).enTexte(lundi))
         assertEquals("jeudi 15 octobre", lundi.plusDays(3).enTexte(lundi))
-        assertEquals("vendredi 1 janvier 2027", LocalDate.of(2027, 1, 1).enTexte(lundi))
+        assertEquals("vendredi 1er janvier 2027", LocalDate.of(2027, 1, 1).enTexte(lundi))
     }
 
     @Test fun quand() {
         val rdv = RendezVous(titre = "dentiste", quand = LocalDateTime.of(2026, 10, 13, 15, 0))
-        assertEquals("demain à 15 h", rdv.quandEnTexte(lundi))
-        assertEquals("demain de 15 h à 16 h 30", rdv.copy(fin = LocalDateTime.of(2026, 10, 13, 16, 30)).quandEnTexte(lundi))
-        assertEquals("demain (toute la journée)", rdv.copy(journee = true).quandEnTexte(lundi))
+        assertEquals("demain à 15 h", rdv.quandEnTexte(aujourdHui = lundi))
+        assertEquals("demain de 15 h à 16 h 30", rdv.copy(fin = LocalDateTime.of(2026, 10, 13, 16, 30)).quandEnTexte(aujourdHui = lundi))
+        assertEquals("demain (toute la journée)", rdv.copy(journee = true).quandEnTexte(aujourdHui = lundi))
     }
 
     @Test fun formatDuFichierCommeEvermindPc() {

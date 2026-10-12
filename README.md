@@ -25,24 +25,36 @@ Il faut [Android Studio](https://developer.android.com/studio) et un téléphone
 Ouvrir le dossier dans Android Studio, attendre la synchronisation Gradle, puis ▶ (Run).
 
 - `gradlew assembleDebug` : construit `app/build/outputs/apk/debug/app-debug.apk`.
-- `gradlew test` : les tests (format des dates, compatibilité du fichier avec Evermind PC).
+- `gradlew test` : les tests sur PC, dont la lecture des phrases comparée à Evermind PC (3 072 phrases).
+- `gradlew connectedDebugAndroidTest` : la même comparaison sur le téléphone ou l'émulateur branché
+  (Android lit les expressions régulières autrement que la JVM).
+- `outils\exporter-phrases.ps1` : refait le fichier de référence de ces tests à partir du dépôt Evermind PC
+  (à relancer quand la lecture change sur PC, puis porter le changement en Kotlin jusqu'à ce que les tests passent).
 - Android 8 minimum (`minSdk 26`), aucune permission Internet.
 
 ### Où est quoi
 
 Le code est dans `app/src/main/java/io/github/jordanjacquot/evermind/` :
 
+- `comprendre/` : lire un rendez-vous écrit en français (`lirePhrase`, portage de `comprendre.ps1`), les répétitions
+  (`prochaineFois`) et le passage d'une phrase comprise aux rendez-vous à créer.
 - `donnees/` : le rendez-vous (`RendezVous`, mêmes champs que le `rendez-vous.json` d'Evermind PC), les sortes
   (`Sorte`, mêmes codes, icônes et couleurs), la base Room et `DepotRendezVous`, seul passage pour lire et écrire.
-- `ui/agenda/` : l'écran principal (calendrier du mois, « À venir » ou le jour choisi).
+- `ui/agenda/` : l'écran principal (barre où l'on écrit un rendez-vous, calendrier du mois, « À venir » ou le jour choisi).
 - `ui/fiche/` : la fiche d'un rendez-vous (détails, choses à préparer, supprimer).
 - `ui/formulaire/` : ajouter ou modifier à la main.
 - `ui/theme/` : couleurs ; `ui/Textes.kt` : dates et heures écrites en français (« demain à 15 h 30 ») ;
   `ui/Navigation.kt` : les écrans et le passage de l'un à l'autre.
 
-Les étapes suivantes auront chacune leur dossier : `comprendre/` (2), `rappels/` (3), `voix/` (4), `assistant/` (5).
+Les étapes suivantes auront chacune leur dossier : `rappels/` (3), `voix/` (4), `assistant/` (5).
 
 ## État
 
-Étape 1 en cours : la structure du projet, l'agenda enregistré sur le téléphone et ses trois écrans.
-Les rendez-vous répétés ne s'affichent qu'à leur première fois (les suivantes viennent avec l'étape 2).
+- **Étape 1** faite : l'agenda enregistré sur le téléphone, calendrier, « À venir », fiche, formulaire.
+- **Étape 2** faite : on écrit « mardi 15 h dentiste », « foot tous les lundis à 19 h sauf en novembre » ou
+  « ElleFest du 27 au 29 octobre » ; ce qui est compris s'affiche pendant qu'on écrit, puis le rendez-vous est créé
+  (« Annuler » juste après). Il manque l'heure ? Evermind le dit, ou on complète dans le formulaire.
+  La lecture donne exactement la même chose qu'Evermind PC sur les 3 072 phrases de ses catalogues.
+  Les rendez-vous qui reviennent s'affichent à chaque fois dans le calendrier.
+- Pas encore : les horaires de travail en postes (« je suis du matin lundi et mardi ») et les demandes à l'assistant
+  (« décale le dentiste à jeudi »), qui viendront avec l'assistant (étape 5).

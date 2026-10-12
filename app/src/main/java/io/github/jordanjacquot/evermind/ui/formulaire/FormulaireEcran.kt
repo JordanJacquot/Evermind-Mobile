@@ -58,9 +58,9 @@ import java.time.ZoneOffset
 /** Ajouter un rendez-vous à la main (id null), ou modifier celui-ci. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun FormulaireEcran(id: String?, jour: LocalDate?, retour: () -> Unit) {
+fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -> Unit) {
     val app = LocalContext.current.applicationContext as EvermindApp
-    val vm = viewModel(key = "formulaire-$id") { FormulaireViewModel(app.depot, id, jour) }
+    val vm = viewModel(key = "formulaire-$id-$phrase") { FormulaireViewModel(app.depot, id, jour, phrase) }
     val b by vm.brouillon.collectAsStateWithLifecycle()
     var choixJour by remember { mutableStateOf(false) }
     var choixHeure by remember { mutableStateOf(false) }
