@@ -2,6 +2,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Aucune permission Internet : tout reste sur le téléphone -->
+    <!-- Le micro, pour la dictée -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Pour trouver la reconnaissance vocale du téléphone (Android 11 et après) -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
 
     <application
         android:name=".EvermindApp"

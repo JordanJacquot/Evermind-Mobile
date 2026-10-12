@@ -46,7 +46,9 @@ Le code est dans `app/src/main/java/io/github/jordanjacquot/evermind/` :
 - `ui/theme/` : couleurs ; `ui/Textes.kt` : dates et heures écrites en français (« demain à 15 h 30 ») ;
   `ui/Navigation.kt` : les écrans et le passage de l'un à l'autre.
 
-Les étapes suivantes auront chacune leur dossier : `rappels/` (3), `voix/` (4), `assistant/` (5).
+- `voix/` : la dictée.
+
+Les étapes suivantes auront chacune leur dossier : `rappels/` (3), `assistant/` (5).
 
 ## État
 
@@ -56,5 +58,9 @@ Les étapes suivantes auront chacune leur dossier : `rappels/` (3), `voix/` (4),
   (« Annuler » juste après). Il manque l'heure ? Evermind le dit, ou on complète dans le formulaire.
   La lecture donne exactement la même chose qu'Evermind PC sur les 3 072 phrases de ses catalogues.
   Les rendez-vous qui reviennent s'affichent à chaque fois dans le calendrier.
+- **Voix, premier temps** : le micro de la barre dicte avec la reconnaissance vocale du téléphone, en mode hors ligne
+  seulement (Android 12 et après ; la première fois, Android télécharge la dictée française, environ 60 Mo).
+  La phrase s'écrit pendant qu'on parle, puis le rendez-vous est créé tout seul.
+  Ensuite : Whisper et Kokoro comme sur PC, et « OK Evermind ».
 - Pas encore : les horaires de travail en postes (« je suis du matin lundi et mardi ») et les demandes à l'assistant
   (« décale le dentiste à jeudi »), qui viendront avec l'assistant (étape 5).

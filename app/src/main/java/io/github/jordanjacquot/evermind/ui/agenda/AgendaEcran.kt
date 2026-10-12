@@ -1,5 +1,9 @@
 package io.github.jordanjacquot.evermind.ui.agenda
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +29,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +49,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +61,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -74,6 +82,7 @@ import io.github.jordanjacquot.evermind.ui.enTexte
 import io.github.jordanjacquot.evermind.ui.majuscule
 import io.github.jordanjacquot.evermind.ui.quandEnTexte
 import io.github.jordanjacquot.evermind.ui.theme.teinte
+import io.github.jordanjacquot.evermind.voix.Dictee
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
@@ -82,7 +91,8 @@ import java.time.YearMonth
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, completer: (String) -> Unit) {
-    val app = LocalContext.current.applicationContext as EvermindApp
+    val contexte = LocalContext.current
+    val app = contexte.applicationContext as EvermindApp
     val vm = viewModel { AgendaViewModel(app.depot) }
     val etat by vm.etat.collectAsStateWithLifecycle()
     val messages = remember { SnackbarHostState() }
@@ -90,6 +100,10 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
     val focus = LocalFocusManager.current
     var phrase by rememberSaveable { mutableStateOf("") }
     var manque by remember { mutableStateOf<Manque?>(null) }
+    val dictee = remember { Dictee(contexte) }
+    var ecoute by remember { mutableStateOf(false) }
+    var alerte by remember { mutableStateOf<String?>(null) }
+    DisposableEffect(Unit) { onDispose { dictee.arreter() } }
 
     fun envoyer() {
         if (phrase.isBlank()) return
@@ -108,6 +122,28 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
                 }
             }
         }
+    }
+
+    // Parler : la phrase s'écrit pendant qu'on parle, puis le rendez-vous est créé tout seul (comme sur PC)
+    fun ecouter() {
+        alerte = null
+        manque = null
+        focus.clearFocus()
+        ecoute = true
+        dictee.ecouter(
+            partiel = { phrase = it },
+            fini = { phrase = it; envoyer() },
+            erreur = { alerte = it },
+            fin = { ecoute = false },
+        )
+    }
+    val demandeMicro = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { accorde ->
+        if (accorde) ecouter() else alerte = "Sans le micro, je ne peux pas t'écouter. Tu peux l'autoriser dans les réglages d'Evermind."
+    }
+    fun micro() {
+        if (ecoute) { dictee.arreter(); ecoute = false; return }
+        if (ContextCompat.checkSelfPermission(contexte, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) ecouter()
+        else demandeMicro.launch(Manifest.permission.RECORD_AUDIO)
     }
 
     Scaffold(
@@ -129,8 +165,11 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
                 Saisie(
                     phrase = phrase,
                     manque = manque,
-                    changer = { phrase = it; manque = null },
+                    ecoute = ecoute,
+                    alerte = alerte,
+                    changer = { phrase = it; manque = null; alerte = null },
                     envoyer = ::envoyer,
+                    micro = ::micro,
                     completer = { completer(phrase); phrase = ""; manque = null },
                 )
             }
@@ -279,20 +318,35 @@ fun CarteRendezVous(f: Fois, onClick: () -> Unit) {
  * En dessous, ce qu'Evermind a compris, au fur et à mesure.
  */
 @Composable
-private fun Saisie(phrase: String, manque: Manque?, changer: (String) -> Unit, envoyer: () -> Unit, completer: () -> Unit) {
+private fun Saisie(
+    phrase: String,
+    manque: Manque?,
+    ecoute: Boolean,
+    alerte: String?,
+    changer: (String) -> Unit,
+    envoyer: () -> Unit,
+    micro: () -> Unit,
+    completer: () -> Unit,
+) {
     val lue = remember(phrase) { if (phrase.isBlank()) null else lirePhrase(phrase) }
     val rdvs = remember(lue) { lue?.versRendezVous().orEmpty() }
     Column(Modifier.padding(bottom = 12.dp)) {
         OutlinedTextField(
             value = phrase,
             onValueChange = changer,
-            placeholder = { Text("mardi 15 h dentiste, foot tous les lundis à 19 h...") },
+            placeholder = { Text(if (ecoute) "Je t'écoute..." else "Dis ou écris : mardi 15 h dentiste...") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onSend = { envoyer() }),
             trailingIcon = {
-                IconButton(onClick = envoyer, enabled = phrase.isNotBlank()) {
-                    Icon(Icons.AutoMirrored.Filled.Send, "Ajouter")
+                Row {
+                    if (phrase.isNotBlank() && !ecoute) {
+                        IconButton(onClick = envoyer) { Icon(Icons.AutoMirrored.Filled.Send, "Ajouter") }
+                    }
+                    IconButton(onClick = micro) {
+                        if (ecoute) Icon(Icons.Default.Stop, "Arrêter d'écouter", tint = MaterialTheme.colorScheme.error)
+                        else Icon(Icons.Default.Mic, "Parler", tint = MaterialTheme.colorScheme.primary)
+                    }
                 }
             },
             modifier = Modifier.fillMaxWidth(),
@@ -300,6 +354,9 @@ private fun Saisie(phrase: String, manque: Manque?, changer: (String) -> Unit, e
         val couleurs = MaterialTheme.colorScheme
         val petit = MaterialTheme.typography.bodySmall
         when {
+            alerte != null -> {
+                Text(alerte, color = couleurs.error, style = petit, modifier = Modifier.padding(top = 6.dp, start = 4.dp))
+            }
             manque != null -> {
                 Text(manque.message, color = couleurs.error, style = petit, modifier = Modifier.padding(top = 6.dp, start = 4.dp))
                 if (manque == Manque.HEURE || manque == Manque.JOUR || manque == Manque.QUAND) {
