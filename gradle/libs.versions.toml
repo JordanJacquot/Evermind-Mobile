@@ -1,14 +1,14 @@
 [versions]
-agp = "8.7.3"
-kotlin = "2.0.21"
-ksp = "2.0.21-1.0.28"
-coreKtx = "1.15.0"
-activityCompose = "1.9.3"
-lifecycle = "2.8.7"
-navigation = "2.8.5"
-composeBom = "2024.12.01"
-room = "2.6.1"
-serialization = "1.7.3"
+agp = "9.4.1"
+kotlin = "2.4.21"
+ksp = "2.3.12"
+coreKtx = "1.19.1"
+activityCompose = "1.13.0"
+lifecycle = "2.11.0"
+navigation = "2.10.2"
+composeBom = "2026.09.00"
+room = "2.8.5"
+serialization = "1.11.0"
 junit = "4.13.2"
 
 [libraries]
@@ -31,7 +31,6 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
