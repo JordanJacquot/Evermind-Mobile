@@ -1,0 +1,18 @@
+# Android Studio et Gradle
+.gradle/
+.idea/
+.kotlin/
+build/
+*/build/
+local.properties
+captures/
+*.iml
+
+# Signature : la clé ne quitte jamais le PC
+*.jks
+*.keystore
+keystore.properties
+
+# Fichiers générés
+*.apk
+*.aab
