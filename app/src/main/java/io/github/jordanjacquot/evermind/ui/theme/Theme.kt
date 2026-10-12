@@ -18,8 +18,12 @@ val Rouge = Color(0xFFFF4D6D)
 private val Couleurs = darkColorScheme(
     primary = Cyan,
     onPrimary = Fond,
+    primaryContainer = Cyan,
+    onPrimaryContainer = Fond,
     secondary = Cyan,
     onSecondary = Fond,
+    secondaryContainer = Cyan.copy(alpha = 0.22f),
+    onSecondaryContainer = Texte,
     background = Fond,
     onBackground = Texte,
     surface = Surface,
