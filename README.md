@@ -81,6 +81,10 @@ Le code est dans `app/src/main/java/io/github/jordanjacquot/evermind/` :
   alors Whisper small, Evermind crée le rendez-vous et répond avec Kokoro (« C'est noté : Foot, tous les lundis à
   19 heures. »), avec les 5 voix du PC. « Installer « OK Evermind » » (42 Mo) : dire « OK Evermind » quand l'agenda
   est à l'écran, puis sa demande. Sans la voix installée, le micro utilise la dictée hors ligne du téléphone.
+  Après la dictée, Evermind corrige les noms mal entendus en les comparant « à l'oreille » avec les 35 000 communes
+  de France, les métiers et spécialités médicales, les enseignes et les mots de ton agenda (« Oftalmologue »,
+  « à messe » pour Metz, « le clair » pour Leclerc, « Epinal » sans accent) : `voix/Correcteur.kt`, lexique dans
+  `app/src/main/assets/lexique/` (refait par `outils/lexique-communes.py`).
   Pas encore : « OK Evermind, ajoute... » d'une seule traite (il faut attendre le bip), ni l'écoute en arrière-plan.
 - **L'assistant** (étape 5, en cours) : « décale le dentiste à jeudi », « supprime les raids de novembre », « j'ai payé
   le loyer », « qu'est-ce que j'ai demain ? », « supprime le coiffeur et mets le dentiste à 16 h ». Evermind comprend

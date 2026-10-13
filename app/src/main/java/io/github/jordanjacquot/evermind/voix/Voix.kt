@@ -63,11 +63,15 @@ class Voix(private val contexte: Context, private val portee: CoroutineScope) {
         }
     }
 
-    /** Écoute une phrase et l'écrit (Whisper). null si rien n'a été dit. */
+    /** Les mots de l'agenda (titres, lieux, personnes) : la dictée les écrit comme dans l'agenda. */
+    var motsAgenda: suspend () -> List<String> = { emptyList() }
+
+    /** Écoute une phrase et l'écrit (Whisper), avec les noms corrigés (villes, métiers, mots de l'agenda). null si rien n'a été dit. */
     suspend fun dicter(debut: () -> Unit = {}): String? = withContext(Dispatchers.Default) {
         val w = moteur({ whisper }, { whisper = it }) { Whisper(contexte) }
         val son = w.ecouterPhrase(debut) ?: return@withContext null
-        nettoyer(w.transcrire(son)).takeIf { it.contains(Regex("\\w")) }
+        val texte = nettoyer(w.transcrire(son)).takeIf { it.contains(Regex("\\w")) } ?: return@withContext null
+        runCatching { Correcteur.du(contexte).corriger(texte, motsAgenda()) }.getOrDefault(texte)
     }
 
     /** Dit la phrase avec la voix choisie (rien si la voix n'est pas installée ou si Evermind ne doit pas répondre). */

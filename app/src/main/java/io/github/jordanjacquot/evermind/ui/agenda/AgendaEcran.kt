@@ -192,7 +192,7 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
         ecoute = true
         dictee.ecouter(
             partiel = { phrase = it },
-            fini = { phrase = it; envoyer() },
+            fini = { phrase = io.github.jordanjacquot.evermind.voix.Correcteur.siPret()?.corriger(it) ?: it; envoyer() },
             erreur = { alerte = it },
             fin = { ecoute = false },
         )

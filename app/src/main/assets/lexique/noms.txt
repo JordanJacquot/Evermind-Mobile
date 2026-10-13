@@ -1,0 +1,212 @@
+# Les noms de tous les jours que la dictée écrit mal : bien écrits ici, Evermind les reconnaît « à l'oreille ».
+# Une ligne par nom ; « ;prononciation » quand il ne se dit pas comme il s'écrit ; « E: » pour une enseigne ou un
+# organisme (corrigé seulement à sa place : « chez … », « à … », ou avec une majuscule).
+# Santé
+ophtalmologue
+ophtalmo
+orthoptiste
+opticien
+dentiste
+orthodontiste
+stomatologue
+kinésithérapeute
+kiné
+ostéopathe
+chiropracteur
+podologue
+podo-orthésiste
+pédicure
+dermatologue
+dermato
+gynécologue
+gynéco
+sage-femme
+obstétricien
+pédiatre
+pédopsychiatre
+psychiatre
+psychologue
+psychomotricien
+psychothérapeute
+neurologue
+neurochirurgien
+cardiologue
+pneumologue
+gastro-entérologue
+gastroentérologue
+hépatologue
+endocrinologue
+diabétologue
+rhumatologue
+néphrologue
+urologue
+oncologue
+cancérologue
+hématologue
+radiologue
+radiothérapeute
+anesthésiste
+allergologue
+angiologue
+phlébologue
+oto-rhino-laryngologiste
+oto-rhino
+ORL;orèle
+orthophoniste
+ergothérapeute
+diététicien
+diététicienne
+nutritionniste
+acupuncteur
+homéopathe
+naturopathe
+sophrologue
+hypnothérapeute
+infirmière
+infirmier
+médecin
+généraliste
+chirurgien
+vétérinaire
+pharmacie
+pharmacien
+laboratoire
+échographie
+radiographie
+mammographie
+scanner
+IRM;irème
+électrocardiogramme
+coloscopie
+endoscopie
+fibroscopie
+prise de sang
+vaccin
+vaccination
+ordonnance
+mutuelle
+Carte Vitale
+kinésithérapie
+ostéopathie
+orthodontie
+# Démarches et métiers
+notaire
+huissier
+avocat
+comptable
+expert-comptable
+banquier
+conseiller
+assureur
+garagiste
+carrossier
+mécanicien
+plombier
+électricien
+chauffagiste
+serrurier
+menuisier
+maçon
+couvreur
+peintre
+vitrier
+déménageur
+coiffeur
+coiffeuse
+esthéticienne
+barbier
+toiletteur
+contrôle technique
+préfecture
+sous-préfecture
+mairie
+tribunal
+commissariat
+gendarmerie
+ambassade
+consulat
+crèche
+nounou
+assistante maternelle
+maternelle
+collège
+lycée
+université
+conservatoire
+auto-école
+code de la route
+permis de conduire
+déchetterie
+# Enseignes et organismes
+E:CAF;caf
+E:CPAM;cépéame
+E:Pôle emploi
+E:France Travail
+E:URSSAF;urssaf
+E:MSA;emmèsa
+E:Ameli
+E:La Poste
+E:SNCF;èssènecéèf
+E:Leclerc;leclère
+E:E.Leclerc;eleclère
+E:Carrefour
+E:Auchan;ochan
+E:Intermarché
+E:Super U;superu
+E:Lidl;lidle
+E:Aldi
+E:Leroy Merlin
+E:Castorama
+E:Brico Dépôt
+E:Bricomarché
+E:Ikea;ikéa
+E:Conforama
+E:But;bute
+E:Decathlon;décatlon
+E:Intersport
+E:Go Sport
+E:Boulanger
+E:Darty
+E:Fnac;fnak
+E:Norauto;noroto
+E:Feu Vert
+E:Speedy;spidi
+E:Midas
+E:Point S
+E:Basic-Fit;basikfite
+E:Fitness Park
+E:McDonald's;makdonaldze
+E:Burger King;beurgueur kingue
+E:KFC;kafécé
+E:Buffalo Grill;bufalo grile
+E:Courtepaille
+E:Hippopotamus
+E:Flunch;fleunche
+E:Kiabi
+E:Primark
+E:Zara
+E:H&M;achèmme
+E:Action
+E:Gifi
+E:Picard;pikar
+E:Biocoop
+E:Monoprix
+E:Franprix
+E:Casino
+E:Cora
+E:Match
+E:Lidl
+E:Orange
+E:SFR;èssèfère
+E:Bouygues;bouygue
+E:Free;fri
+E:Crédit Agricole
+E:Société Générale
+E:BNP;bénépé
+E:Caisse d'Épargne
+E:Banque Populaire
+E:LCL;èlcéèl
+E:Crédit Mutuel
+E:CIC;cé i cé
+E:La Banque Postale
+E:Doctolib;doctolibe

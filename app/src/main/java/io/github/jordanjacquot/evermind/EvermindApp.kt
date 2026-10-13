@@ -21,7 +21,9 @@ class EvermindApp : Application() {
     /** Ce qui doit continuer même quand on change d'écran (téléchargement des modèles, moteurs de la voix). */
     val portee = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     val depot: DepotRendezVous by lazy { DepotRendezVous(BaseEvermind.ouvrir(this).rendezVous()) { Planificateur.reprogrammer(this) } }
-    val voix: Voix by lazy { Voix(this, portee) }
+    val voix: Voix by lazy {
+        Voix(this, portee).also { v -> v.motsAgenda = { depot.liste().flatMap { r -> listOf(r.titre, r.lieu) + r.avec } } }
+    }
     /** L'assistant (le modèle choisi selon la mémoire du téléphone), chargé seulement quand on lui parle. */
     val cerveau: Cerveau by lazy { Cerveau(this, portee) { r -> r.rappelsVoulus(ReglagesRappels(this)) } }
 
@@ -46,6 +48,12 @@ class EvermindApp : Application() {
         Planificateur.reprogrammer(this)
         // Les consignes de l'IA lues une fois pour toutes (si elle est installée et pas encore prête), sans gêner le lancement
         portee.launch { kotlinx.coroutines.delay(15_000); cerveau.preparer() }
+        // Le lexique des noms (villes, métiers) prêt avant la première dictée
+        portee.launch(kotlinx.coroutines.Dispatchers.Default) {
+            val t0 = System.currentTimeMillis()
+            runCatching { io.github.jordanjacquot.evermind.voix.Correcteur.du(this@EvermindApp) }
+            android.util.Log.i("Evermind", "lexique des noms prêt en ${System.currentTimeMillis() - t0} ms")
+        }
         voix.prechauffer()
     }
 }

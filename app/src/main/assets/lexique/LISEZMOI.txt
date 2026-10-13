@@ -1,0 +1,5 @@
+Lexique de la correction des noms après la dictée (voix/Correcteur.kt), refait par outils/lexique-communes.py :
+- communes.txt : les communes de France, geo.api.gouv.fr (Etalab, Licence Ouverte 2.0).
+- mots.txt : les 20 000 mots les plus courants du français, FrequencyWords d'Hermit Dave (OpenSubtitles 2018),
+  licence CC BY-SA 4.0, https://github.com/hermitdave/FrequencyWords
+- noms.txt : écrit à la main (spécialités médicales, métiers, enseignes et organismes).
