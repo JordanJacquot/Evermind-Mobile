@@ -29,6 +29,16 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import io.github.jordanjacquot.evermind.rappels.Notifications
+import io.github.jordanjacquot.evermind.rappels.Planificateur
+import io.github.jordanjacquot.evermind.rappels.ReglagesRappels
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +60,12 @@ import kotlinx.coroutines.launch
 fun ReglagesEcran(retour: () -> Unit) {
     val app = LocalContext.current.applicationContext as EvermindApp
     val voix = app.voix
+    val rappels = remember { ReglagesRappels(app) }
+    var veille by remember { mutableStateOf(rappels.veille) }
+    var matin by remember { mutableStateOf(rappels.matin) }
+    var heureAvant by remember { mutableStateOf(rappels.heureAvant) }
+    var notificationsPermises by remember { mutableStateOf(Notifications.permises(app)) }
+    val demande = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { notificationsPermises = it }
     val scope = rememberCoroutineScope()
     val etatVoix by voix.installation.etat(Pack.VOIX).collectAsStateWithLifecycle()
     val etatEveil by voix.installation.etat(Pack.EVEIL).collectAsStateWithLifecycle()
@@ -73,6 +89,32 @@ fun ReglagesEcran(retour: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize().padding(marges).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
         ) {
+            Text("Rappels", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Text(
+                "Les rappels donnés par défaut. Pour un rendez-vous en particulier, tu peux en choisir d'autres dans son " +
+                    "formulaire (ou les dire : « rappelle-moi 2 jours avant »).",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!notificationsPermises) {
+                Text("Evermind n'a pas le droit d'envoyer des notifications : aucun rappel ne s'affichera.",
+                    color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    Button(onClick = { demande.launch(Manifest.permission.POST_NOTIFICATIONS) }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Autoriser les notifications")
+                    }
+                }
+            }
+            Ligne("La veille à 20 h", veille) { veille = it; rappels.veille = it; Planificateur.reprogrammer(app) }
+            Ligne("Le matin même à 8 h", matin) { matin = it; rappels.matin = it; Planificateur.reprogrammer(app) }
+            Ligne("1 h avant", heureAvant) { heureAvant = it; rappels.heureAvant = it; Planificateur.reprogrammer(app) }
+            Text(
+                "Les choses à faire avec une heure sont rappelées à l'heure même.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
             Text("La voix", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             Text(
                 "Pour parler à Evermind comme sur PC : la dictée Whisper et la voix naturelle Kokoro. " +

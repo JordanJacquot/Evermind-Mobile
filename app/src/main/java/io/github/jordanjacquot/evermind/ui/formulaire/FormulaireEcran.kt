@@ -48,6 +48,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.jordanjacquot.evermind.EvermindApp
 import io.github.jordanjacquot.evermind.donnees.Sorte
+import io.github.jordanjacquot.evermind.rappels.RappelsChoix
+import io.github.jordanjacquot.evermind.rappels.ReglagesRappels
+import io.github.jordanjacquot.evermind.rappels.rappelsDefaut
+import io.github.jordanjacquot.evermind.ui.rappelEnTexte
 import io.github.jordanjacquot.evermind.ui.enTexte
 import io.github.jordanjacquot.evermind.ui.majuscule
 import java.time.Instant
@@ -59,7 +63,8 @@ import java.time.ZoneOffset
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -> Unit) {
-    val app = LocalContext.current.applicationContext as EvermindApp
+    val contexte = LocalContext.current
+    val app = contexte.applicationContext as EvermindApp
     val vm = viewModel(key = "formulaire-$id-$phrase") { FormulaireViewModel(app.depot, id, jour, phrase) }
     val b by vm.brouillon.collectAsStateWithLifecycle()
     var choixJour by remember { mutableStateOf(false) }
@@ -138,6 +143,26 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
                 minLines = 3,
                 modifier = Modifier.fillMaxWidth(),
             )
+            // Les rappels : ceux par défaut (Réglages), ou ceux choisis pour ce rendez-vous
+            val parDefaut = rappelsDefaut(b.sorte, b.journee, ReglagesRappels(contexte))
+            val choisis = b.rappels ?: parDefaut
+            Text("Rappels", style = MaterialTheme.typography.labelLarge)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = b.rappels == null,
+                    onClick = { vm.changer { it.copy(rappels = if (it.rappels == null) parDefaut else null) } },
+                    label = { Text("Par défaut") },
+                )
+                RappelsChoix.filter { !b.journee || !it.startsWith("m") }.forEach { code ->
+                    FilterChip(
+                        selected = code in choisis,
+                        onClick = { vm.changer { it.copy(rappels = if (code in choisis) choisis - code else RappelsChoix.filter { c -> c in choisis || c == code }) } },
+                        label = { Text(rappelEnTexte(code)) },
+                    )
+                }
+            }
+            if (choisis.isEmpty()) Text("Aucun rappel pour ce rendez-vous.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Important", modifier = Modifier.weight(1f))
                 Switch(checked = b.important, onCheckedChange = { v -> vm.changer { it.copy(important = v) } })

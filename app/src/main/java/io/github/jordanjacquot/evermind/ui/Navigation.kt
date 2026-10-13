@@ -1,6 +1,7 @@
 package io.github.jordanjacquot.evermind.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -15,8 +16,11 @@ import java.time.LocalDate
 
 /** Les écrans de l'app et comment on passe de l'un à l'autre. */
 @Composable
-fun EvermindNavigation() {
+fun EvermindNavigation(ficheDemandee: String? = null, ficheOuverte: () -> Unit = {}) {
     val nav = rememberNavController()
+    LaunchedEffect(ficheDemandee) {
+        if (ficheDemandee != null) { nav.navigate("fiche/$ficheDemandee"); ficheOuverte() }
+    }
     NavHost(navController = nav, startDestination = "agenda") {
         composable("agenda") {
             AgendaEcran(

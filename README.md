@@ -51,9 +51,10 @@ Le code est dans `app/src/main/java/io/github/jordanjacquot/evermind/` :
 
 - `voix/` : la dictée du téléphone, les modèles (`Modeles`, versions et empreintes fixées) et leur installation,
   Whisper, Kokoro et l'écoute de « OK Evermind » (Vosk) ; `Voix` les réunit, et ce qu'Evermind répond.
+- `rappels/` : les rappels (comme sur PC), l'alarme Android qui les donne à l'heure, et leurs notifications.
 - `ui/agenda/Conversation.kt` : parler à Evermind (micro ou « OK Evermind ») ; `ui/reglages/` : les réglages.
 
-Les étapes suivantes auront chacune leur dossier : `rappels/` (3), `assistant/` (5).
+L'assistant (étape 5) aura son dossier `assistant/`.
 
 ## État
 
@@ -63,6 +64,10 @@ Les étapes suivantes auront chacune leur dossier : `rappels/` (3), `assistant/`
   (« Annuler » juste après). Il manque l'heure ? Evermind le dit, ou on complète dans le formulaire.
   La lecture donne exactement la même chose qu'Evermind PC sur les 3 072 phrases de ses catalogues.
   Les rendez-vous qui reviennent s'affichent à chaque fois dans le calendrier.
+- **Rappels** (étape 3), comme sur PC : la veille à 20 h, le matin même à 8 h, 1 h avant (à l'heure pour une chose
+  à faire) ; chacun se coupe dans les Réglages. Chaque rendez-vous peut avoir les siens (formulaire, ou « rappelle-moi
+  2 jours avant »), ou aucun. Notification aux couleurs de la sorte, avec « Voir » et « Dans 10 min » ; à l'heure
+  exacte même Evermind fermé, et après un redémarrage du téléphone.
 - **La voix** (étape 4), comme sur PC : Réglages, « Installer la voix » (510 Mo, une seule fois) ; le micro utilise
   alors Whisper small, Evermind crée le rendez-vous et répond avec Kokoro (« C'est noté : Foot, tous les lundis à
   19 heures. »), avec les 5 voix du PC. « Installer « OK Evermind » » (42 Mo) : dire « OK Evermind » quand l'agenda

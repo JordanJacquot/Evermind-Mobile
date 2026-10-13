@@ -43,6 +43,8 @@ import io.github.jordanjacquot.evermind.donnees.laRepetition
 import io.github.jordanjacquot.evermind.donnees.prochaineFoisDepuis
 import io.github.jordanjacquot.evermind.ui.enTexte
 import io.github.jordanjacquot.evermind.ui.rappelEnTexte
+import io.github.jordanjacquot.evermind.rappels.ReglagesRappels
+import io.github.jordanjacquot.evermind.rappels.rappelsDefaut
 import io.github.jordanjacquot.evermind.ui.majuscule
 import io.github.jordanjacquot.evermind.ui.quandEnTexte
 import io.github.jordanjacquot.evermind.ui.theme.teinte
@@ -97,7 +99,8 @@ fun FicheEcran(id: String, retour: () -> Unit, modifier: () -> Unit) {
                 TextButton(onClick = { runCatching { uri.openUri(r.lien) } }) { Text("Ouvrir le lien") }
             }
             if (r.notes.isNotBlank()) Detail("Notes", r.notes)
-            r.rappels?.let { Detail("Rappels", if (it.isEmpty()) "aucun" else it.joinToString(", ") { c -> rappelEnTexte(c) }) }
+            val rappels = r.rappels ?: rappelsDefaut(r.sorte, r.journee, ReglagesRappels(LocalContext.current))
+            Detail("Rappels", if (rappels.isEmpty()) "aucun" else rappels.joinToString(", ") { c -> rappelEnTexte(c) } + if (r.rappels == null) " (par défaut)" else "")
             if (r.aPreparer.isNotEmpty()) {
                 Text("À préparer", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(top = 12.dp))

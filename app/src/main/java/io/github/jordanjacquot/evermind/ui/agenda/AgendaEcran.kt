@@ -110,6 +110,15 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
     var ecoute by remember { mutableStateOf(false) }
     var alerte by remember { mutableStateOf<String?>(null) }
     DisposableEffect(Unit) { onDispose { dictee.arreter() } }
+    // Les rappels ont besoin des notifications : demandé une fois, au premier lancement
+    val demandeNotifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    LaunchedEffect(Unit) {
+        val prefs = contexte.getSharedPreferences("rappels", android.content.Context.MODE_PRIVATE)
+        if (android.os.Build.VERSION.SDK_INT >= 33 && !prefs.getBoolean("notifications-demandees", false)) {
+            prefs.edit().putBoolean("notifications-demandees", true).apply()
+            demandeNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     // « OK Evermind » écoute seulement quand l'agenda est à l'écran
     val cycle = LocalLifecycleOwner.current
     DisposableEffect(cycle) {

@@ -31,6 +31,8 @@ data class Brouillon(
     val lien: String = "",
     val notes: String = "",
     val important: Boolean = false,
+    /** null : les rappels par défaut ; une liste (même vide) : ceux-là. */
+    val rappels: List<String>? = null,
 ) {
     val peutEnregistrer get() = titre.isNotBlank() && (journee || fin == null || fin.isAfter(heure))
 }
@@ -61,12 +63,12 @@ class FormulaireViewModel(
                 avec = p.avec.joinToString(", "),
                 lien = p.lien,
                 important = p.important,
+                rappels = p.rappels,
             )
-            // (les rappels, l'année de naissance et la liste à préparer ne sont pas dans le formulaire mais restent)
+            // (l'année de naissance et la liste à préparer ne sont pas dans le formulaire mais restent)
             original = RendezVous(
                 titre = "",
                 quand = LocalDateTime.now(),
-                rappels = p.rappels,
                 naissance = p.naissance,
                 aPreparer = p.aPreparer.map { APreparer(it) },
             )
@@ -86,6 +88,7 @@ class FormulaireViewModel(
                 lien = r.lien,
                 notes = r.notes,
                 important = r.important,
+                rappels = r.rappels,
             )
         }
     }
@@ -108,6 +111,7 @@ class FormulaireViewModel(
             lien = b.lien.trim(),
             notes = b.notes.trim(),
             important = b.important,
+            rappels = b.rappels,
         )
         viewModelScope.launch {
             depot.enregistrer(rdv)

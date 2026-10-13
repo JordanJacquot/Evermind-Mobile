@@ -10,6 +10,9 @@ interface RendezVousDao {
     @Query("SELECT * FROM rendez_vous ORDER BY quand")
     fun tous(): Flow<List<RendezVous>>
 
+    @Query("SELECT * FROM rendez_vous")
+    suspend fun liste(): List<RendezVous>
+
     @Query("SELECT * FROM rendez_vous WHERE id = :id")
     fun parId(id: String): Flow<RendezVous?>
 
