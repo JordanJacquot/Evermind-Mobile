@@ -9,6 +9,7 @@ import androidx.navigation.navArgument
 import io.github.jordanjacquot.evermind.ui.agenda.AgendaEcran
 import io.github.jordanjacquot.evermind.ui.fiche.FicheEcran
 import io.github.jordanjacquot.evermind.ui.formulaire.FormulaireEcran
+import io.github.jordanjacquot.evermind.ui.reglages.ReglagesEcran
 import java.net.URLEncoder
 import java.time.LocalDate
 
@@ -22,8 +23,10 @@ fun EvermindNavigation() {
                 ouvrirFiche = { id -> nav.navigate("fiche/$id") },
                 ajouter = { jour -> nav.navigate("formulaire?jour=${jour ?: ""}") },
                 completer = { phrase -> nav.navigate("formulaire?phrase=${URLEncoder.encode(phrase, "UTF-8")}") },
+                reglages = { nav.navigate("reglages") },
             )
         }
+        composable("reglages") { ReglagesEcran(retour = { nav.popBackStack() }) }
         composable("fiche/{id}", arguments = listOf(navArgument("id") { type = NavType.StringType })) { entree ->
             val id = entree.arguments?.getString("id").orEmpty()
             FicheEcran(

@@ -1,3 +1,6 @@
+import java.net.URI
+import java.security.MessageDigest
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -16,6 +19,8 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Téléphones (arm) et émulateur du PC (x86_64) : la voix n'existe pas pour les autres
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
     }
 
     buildTypes {
@@ -47,6 +52,20 @@ android {
     }
 }
 
+// sherpa-onnx (Whisper, Kokoro, détection de la parole) n'est pas sur Maven : son .aar est téléchargé une fois depuis
+// sa page GitHub, à la même version que sur PC, et son empreinte est vérifiée
+val sherpaOnnx: File = rootProject.file(".bibliotheques/sherpa-onnx-1.13.8.aar").also { aar ->
+    val empreinte = "633c24321e06b1fe79feafa03ea16cbc0f8a286641e2da3559bac91bdb13bd96"
+    fun sha256(f: File) = MessageDigest.getInstance("SHA-256").digest(f.readBytes()).joinToString("") { "%02x".format(it) }
+    if (!aar.exists() || sha256(aar) != empreinte) {
+        aar.parentFile.mkdirs()
+        val tmp = File(aar.path + ".part")
+        URI("https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.8/sherpa-onnx-1.13.8.aar").toURL().openStream().use { e -> tmp.outputStream().use { e.copyTo(it) } }
+        check(sha256(tmp) == empreinte) { "sherpa-onnx : empreinte inattendue, fichier refusé" }
+        tmp.renameTo(aar)
+    }
+}
+
 // Le schéma de la base est gardé dans le dépôt : il sert à écrire les migrations
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
@@ -71,6 +90,11 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.kotlinx.serialization.json)
+
+    // La voix : sherpa-onnx (Whisper, Kokoro), Vosk (« OK Evermind »), et de quoi ouvrir les archives des modèles
+    implementation(files(sherpaOnnx))
+    implementation(libs.vosk.android)
+    implementation(libs.commons.compress)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.runner)

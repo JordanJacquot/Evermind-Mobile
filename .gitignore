@@ -16,3 +16,6 @@ keystore.properties
 # Fichiers générés
 *.apk
 *.aab
+
+# Bibliothèques téléchargées par Gradle (sherpa-onnx), avec leur empreinte vérifiée
+.bibliotheques/

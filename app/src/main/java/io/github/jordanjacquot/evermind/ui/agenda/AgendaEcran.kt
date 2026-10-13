@@ -30,6 +30,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -50,6 +51,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +64,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -90,10 +95,11 @@ import java.time.YearMonth
 /** L'écran principal : le calendrier du mois, puis « À venir » ou les rendez-vous du jour choisi. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, completer: (String) -> Unit) {
+fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, completer: (String) -> Unit, reglages: () -> Unit) {
     val contexte = LocalContext.current
     val app = contexte.applicationContext as EvermindApp
-    val vm = viewModel { AgendaViewModel(app.depot) }
+    val vm = viewModel { AgendaViewModel(app) }
+    val etatVoix by vm.conversation.etat.collectAsStateWithLifecycle()
     val etat by vm.etat.collectAsStateWithLifecycle()
     val messages = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -104,10 +110,19 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
     var ecoute by remember { mutableStateOf(false) }
     var alerte by remember { mutableStateOf<String?>(null) }
     DisposableEffect(Unit) { onDispose { dictee.arreter() } }
+    // « OK Evermind » écoute seulement quand l'agenda est à l'écran
+    val cycle = LocalLifecycleOwner.current
+    DisposableEffect(cycle) {
+        val observateur = LifecycleEventObserver { _, e ->
+            if (e == Lifecycle.Event.ON_RESUME) vm.conversation.ecranVisible(true)
+            if (e == Lifecycle.Event.ON_PAUSE) vm.conversation.ecranVisible(false)
+        }
+        cycle.lifecycle.addObserver(observateur)
+        onDispose { cycle.lifecycle.removeObserver(observateur); vm.conversation.ecranVisible(false) }
+    }
 
-    fun envoyer() {
-        if (phrase.isBlank()) return
-        when (val r = vm.ajouter(phrase)) {
+    fun montrer(r: Ajout) {
+        when (r) {
             is Ajout.Incomplet -> manque = r.manque
             is Ajout.Fait -> {
                 phrase = ""
@@ -121,6 +136,19 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
                     if (choix == SnackbarResult.ActionPerformed) vm.annuler(r.rendezVous)
                 }
             }
+        }
+    }
+
+    fun envoyer() {
+        if (phrase.isBlank()) return
+        montrer(vm.ajouter(phrase))
+    }
+
+    // Ce qui a été dit à voix haute s'affiche comme si on l'avait écrit
+    LaunchedEffect(vm) {
+        vm.conversation.dits.collect { d ->
+            phrase = d.texte
+            montrer(d.ajout)
         }
     }
 
@@ -138,18 +166,27 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
         )
     }
     val demandeMicro = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { accorde ->
-        if (accorde) ecouter() else alerte = "Sans le micro, je ne peux pas t'écouter. Tu peux l'autoriser dans les réglages d'Evermind."
+        if (accorde) { if (app.voix.voixInstallee) vm.conversation.parler() else ecouter() } else alerte = "Sans le micro, je ne peux pas t'écouter. Tu peux l'autoriser dans les réglages d'Evermind."
     }
     fun micro() {
         if (ecoute) { dictee.arreter(); ecoute = false; return }
         if (ContextCompat.checkSelfPermission(contexte, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) ecouter()
         else demandeMicro.launch(Manifest.permission.RECORD_AUDIO)
     }
+    // Avec la voix installée : Whisper, comme sur PC ; sinon la dictée du téléphone
+    fun parler() {
+        if (!app.voix.voixInstallee) { micro(); return }
+        if (ContextCompat.checkSelfPermission(contexte, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            alerte = null; manque = null; phrase = ""; focus.clearFocus()
+            vm.conversation.parler()
+        } else demandeMicro.launch(Manifest.permission.RECORD_AUDIO)
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Evermind", fontWeight = FontWeight.Bold) },
+                actions = { IconButton(onClick = reglages) { Icon(Icons.Default.Settings, "Réglages") } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
@@ -165,11 +202,12 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
                 Saisie(
                     phrase = phrase,
                     manque = manque,
-                    ecoute = ecoute,
+                    ecoute = ecoute || etatVoix == EtatVoix.ECOUTE || etatVoix == EtatVoix.COMPREND,
+                    invite = etatVoix.invite,
                     alerte = alerte,
                     changer = { phrase = it; manque = null; alerte = null },
                     envoyer = ::envoyer,
-                    micro = ::micro,
+                    micro = ::parler,
                     completer = { completer(phrase); phrase = ""; manque = null },
                 )
             }
@@ -322,6 +360,7 @@ private fun Saisie(
     phrase: String,
     manque: Manque?,
     ecoute: Boolean,
+    invite: String?,
     alerte: String?,
     changer: (String) -> Unit,
     envoyer: () -> Unit,
@@ -334,7 +373,7 @@ private fun Saisie(
         OutlinedTextField(
             value = phrase,
             onValueChange = changer,
-            placeholder = { Text(if (ecoute) "Je t'écoute..." else "Dis ou écris : mardi 15 h dentiste...") },
+            placeholder = { Text(invite ?: if (ecoute) "Je t'écoute..." else "Dis ou écris : mardi 15 h dentiste...") },
             singleLine = true,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Send),
             keyboardActions = KeyboardActions(onSend = { envoyer() }),

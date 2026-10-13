@@ -10,6 +10,8 @@ composeBom = "2026.09.00"
 room = "2.8.5"
 serialization = "1.11.0"
 junit = "4.13.2"
+vosk = "0.3.75"
+commonsCompress = "1.28.0"
 androidxTestRunner = "1.7.0"
 androidxTestJunit = "1.3.0"
 
@@ -30,6 +32,8 @@ androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = 
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+vosk-android = { group = "com.alphacephei", name = "vosk-android", version.ref = "vosk" }
+commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commonsCompress" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
 androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestJunit" }
 

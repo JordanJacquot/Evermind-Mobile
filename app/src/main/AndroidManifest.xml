@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Aucune permission Internet : tout reste sur le téléphone -->
+    <!-- Internet sert seulement à télécharger les modèles de la voix (« Installer la voix », versions et empreintes
+         fixées). Les rendez-vous, la voix et ce qui est dit restent sur le téléphone. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Le micro, pour la dictée -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 

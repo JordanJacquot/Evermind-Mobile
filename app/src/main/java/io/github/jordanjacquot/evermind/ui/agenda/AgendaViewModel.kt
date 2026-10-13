@@ -2,6 +2,7 @@ package io.github.jordanjacquot.evermind.ui.agenda
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.jordanjacquot.evermind.EvermindApp
 import io.github.jordanjacquot.evermind.comprendre.Manque
 import io.github.jordanjacquot.evermind.comprendre.lirePhrase
 import io.github.jordanjacquot.evermind.comprendre.versRendezVous
@@ -35,7 +36,10 @@ sealed interface Ajout {
     data class Incomplet(val manque: Manque) : Ajout
 }
 
-class AgendaViewModel(private val depot: DepotRendezVous) : ViewModel() {
+class AgendaViewModel(app: EvermindApp) : ViewModel() {
+    private val depot: DepotRendezVous = app.depot
+    /** Parler à Evermind (micro ou « OK Evermind »). */
+    val conversation = Conversation(app, app.voix, viewModelScope, ::ajouter)
     private val mois = MutableStateFlow(YearMonth.now())
     private val jourChoisi = MutableStateFlow<LocalDate?>(null)
 

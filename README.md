@@ -1,7 +1,8 @@
 ﻿# Evermind Mobile
 
 L'agenda qui se souvient de tout pour toi, sur Android. Version téléphone d'[Evermind](https://github.com/JordanJacquot/Evermind).
-Tout reste sur le téléphone : la dictée, la voix et l'assistant tournent en local. Rien n'est envoyé sur Internet.
+Tout reste sur le téléphone : la dictée, la voix et l'assistant tournent en local. Rien n'est envoyé sur Internet
+(Internet sert seulement à télécharger une fois les modèles de la voix, comme sur PC).
 
 ## Les choix
 
@@ -30,7 +31,9 @@ Ouvrir le dossier dans Android Studio, attendre la synchronisation Gradle, puis 
   (Android lit les expressions régulières autrement que la JVM).
 - `outils\exporter-phrases.ps1` : refait le fichier de référence de ces tests à partir du dépôt Evermind PC
   (à relancer quand la lecture change sur PC, puis porter le changement en Kotlin jusqu'à ce que les tests passent).
-- Android 8 minimum (`minSdk 26`), aucune permission Internet.
+- Android 8 minimum (`minSdk 26`). La permission Internet ne sert qu'à « Installer la voix ».
+- Au premier build, Gradle télécharge sherpa-onnx 1.13.8 (son `.aar` n'est pas sur Maven), empreinte vérifiée,
+  dans `.bibliotheques/`.
 
 ### Où est quoi
 
@@ -46,7 +49,9 @@ Le code est dans `app/src/main/java/io/github/jordanjacquot/evermind/` :
 - `ui/theme/` : couleurs ; `ui/Textes.kt` : dates et heures écrites en français (« demain à 15 h 30 ») ;
   `ui/Navigation.kt` : les écrans et le passage de l'un à l'autre.
 
-- `voix/` : la dictée.
+- `voix/` : la dictée du téléphone, les modèles (`Modeles`, versions et empreintes fixées) et leur installation,
+  Whisper, Kokoro et l'écoute de « OK Evermind » (Vosk) ; `Voix` les réunit, et ce qu'Evermind répond.
+- `ui/agenda/Conversation.kt` : parler à Evermind (micro ou « OK Evermind ») ; `ui/reglages/` : les réglages.
 
 Les étapes suivantes auront chacune leur dossier : `rappels/` (3), `assistant/` (5).
 
@@ -58,9 +63,10 @@ Les étapes suivantes auront chacune leur dossier : `rappels/` (3), `assistant/`
   (« Annuler » juste après). Il manque l'heure ? Evermind le dit, ou on complète dans le formulaire.
   La lecture donne exactement la même chose qu'Evermind PC sur les 3 072 phrases de ses catalogues.
   Les rendez-vous qui reviennent s'affichent à chaque fois dans le calendrier.
-- **Voix, premier temps** : le micro de la barre dicte avec la reconnaissance vocale du téléphone, en mode hors ligne
-  seulement (Android 12 et après ; la première fois, Android télécharge la dictée française, environ 60 Mo).
-  La phrase s'écrit pendant qu'on parle, puis le rendez-vous est créé tout seul.
-  Ensuite : Whisper et Kokoro comme sur PC, et « OK Evermind ».
+- **La voix** (étape 4), comme sur PC : Réglages, « Installer la voix » (510 Mo, une seule fois) ; le micro utilise
+  alors Whisper small, Evermind crée le rendez-vous et répond avec Kokoro (« C'est noté : Foot, tous les lundis à
+  19 heures. »), avec les 5 voix du PC. « Installer « OK Evermind » » (42 Mo) : dire « OK Evermind » quand l'agenda
+  est à l'écran, puis sa demande. Sans la voix installée, le micro utilise la dictée hors ligne du téléphone.
+  Pas encore : « OK Evermind, ajoute... » d'une seule traite (il faut attendre le bip), ni l'écoute en arrière-plan.
 - Pas encore : les horaires de travail en postes (« je suis du matin lundi et mardi ») et les demandes à l'assistant
   (« décale le dentiste à jeudi »), qui viendront avec l'assistant (étape 5).
