@@ -62,7 +62,8 @@ class Assistant(
         }
         val agenda = AgendaIA(rendezVous, maintenant)
         // D'abord les règles d'Evermind : immédiat, et toujours la même chose pour la même phrase
-        val compris = Ordres(agenda, memoire, horaires()).comprendre(texte)
+        // (une erreur dans les règles ne doit jamais faire planter l'app : la phrase est alors « pas comprise »)
+        val compris = runCatching { Ordres(agenda, memoire, horaires()).comprendre(texte) }.getOrNull()
         if (compris != null) {
             val res = Actions(agenda, rappelsParDefaut, annulations).appliquer(compris, emptyMap(), texte)
             retenir(rendezVous, agenda, compris, maintenant)

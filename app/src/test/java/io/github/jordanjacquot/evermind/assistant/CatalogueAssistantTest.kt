@@ -752,6 +752,40 @@ class CatalogueAssistantTest {
         cas("piège", "Je mets combien de temps pour aller au dentiste ?") { taille == 8 },
     )
 
+    /** Un troisième tour sur toute l'app, d'autres tournures (écrit après les corrections, mesuré avant retouche). */
+    private val tour3: List<Cas> get() = listOf(
+        cas("créer", "Salut, tu peux me caler un rendez-vous chez l'ostéo à Thionville mercredi prochain vers 17 h ?") { val r = rv("*st*o*").firstOrNull { it.titre.contains("st", true) }; r != null && r.quand.hour == 17 && r.lieu.contains("Thionville") },
+        cas("créer", "Je vais chez ma tante à Sarreguemines dimanche midi avec maman.") { val r = agenda.firstOrNull { it.lieu.contains("Sarreguemines") || it.titre.contains("Sarreguemines") }; r != null && r.quand.dayOfWeek == DayOfWeek.SUNDAY && r.quand.hour == 12 },
+        cas("créer", "Note un cours de piano chaque samedi à 10 h à partir du 7 novembre.") { val r = rv("*iano*").firstOrNull(); rep(r)?.jour == 6 && r!!.quand.monthValue == 11 && r.quand.dayOfMonth == 7 },
+        cas("créer", "Programme une réunion d'équipe le dernier vendredi de novembre à 16 h.") { rv("R*union*").firstOrNull()?.quand?.let { it.monthValue == 11 && it.dayOfWeek == VEN && it.dayOfMonth >= 24 && it.hour == 16 } == true },
+        cas("créer", "Mets un rappel pour appeler la mutuelle lundi à 9 h, c'est urgent.") { val r = rv("*mutuelle*").firstOrNull(); jour(r, prochain(LUN), "09:00") && r!!.important },
+        cas("créer", "Barbecue chez Julien samedi à 12 h, il faut apporter des saucisses, du pain et des chips.") { val r = rv("Barbecue*").firstOrNull(); r != null && r.aPreparer.size == 3 && !r.titre.contains("saucisses") },
+        cas("créer", "Rendez-vous chez le pédiatre pour Léo le 6 novembre à 15 h 45 au 2 place d'Armes à Metz.") { val r = rv("*diatre*").firstOrNull(); jour(r, le(6, 11), "15:45") && r!!.lieu.contains("place d'Armes") },
+        cas("créer", "Ajoute le match du FC Metz à Saint-Symphorien samedi à 20 h avec Tom.") { val r = rv("Match*").firstOrNull(); jour(r, prochain(SAM), "20:00") && "Tom" in r!!.avec },
+        cas("dictée", "dicté:Rendez-vous chez le gynéco logue à Forbach jeudi à 11h.") { val r = rv("*yn*co*").firstOrNull(); r != null && r.lieu.contains("Forbach") },
+        cas("changer", "En fait le dentiste ce sera mardi prochain à la même heure.") { val r = rv("Dentiste").firstOrNull(); r != null && r.quand.dayOfWeek == MAR && r.quand.hour == 15 },
+        cas("changer", "Tu peux mettre le foot à Woippy plutôt ?") { rv("Foot")[0].lieu.contains("Woippy") },
+        cas("changer", "Pour la soirée chez Max, Inès ne vient plus mais Clara vient.") { val a = rv("Soirée chez Max")[0].avec; "Inès" !in a && "Clara" in a },
+        cas("changer", "Ajoute aux courses du loyer... non, au dentiste : penser à la mutuelle.") { rv("Dentiste")[0].aPreparer.any { it.texte.contains("mutuelle", true) } || rv("Dentiste")[0].notes.contains("mutuelle") },
+        cas("changer", "Le raid de demain commence plus tôt, à 20 h.") { val r = rv("Raid avec les potes")[0]; entre(lea, lea.plusDays(1)).any { it.rv.id == r.id && it.prochain.hour == 20 } },
+        cas("changer", "Préviens-moi 30 minutes avant la soirée chez Max au lieu d'une heure.") { rv("Soirée chez Max")[0].rappels?.contains("m30") == true },
+        cas("changer", "Le loyer c'est fait pour ce mois-ci.") { rv("Payer le loyer")[0].fait || rep(rv("Payer le loyer")[0])?.sauf != null },
+        cas("supprimer", "Retire tous les raids de décembre sauf celui de Noël.") { (rep(rv("Raid avec les potes").firstOrNull())?.sauf?.count { it.contains("-12-") } ?: 0) >= 3 },
+        cas("supprimer", "Bon, le coiffeur c'est passé, tu peux l'effacer.") { rv("Coiffeur").isEmpty() && taille == 7 },
+        cas("supprimer", "Je n'ai plus besoin du rendez-vous de ${nomJour(foot)} soir.") { rv("Foot").isEmpty() && taille == 7 },
+        cas("question", "C'est à quelle adresse la soirée chez Max ?") { taille == 8 && dit.isNotBlank() },
+        cas("question", "Qu'est-ce que je fais ${nomJour(dentiste)} après-midi ?") { taille == 8 && dit.contains("Dentiste") },
+        cas("question", "Est-ce que j'ai déjà payé le loyer ?") { taille == 8 && dit.contains(Regex("non|pas encore|pas fait", RegexOption.IGNORE_CASE)) },
+        cas("question", "Combien de choses j'ai à préparer pour le dentiste ?") { taille == 8 && dit.contains("Vitale", true) },
+        cas("question", "C'est qui qui vient à la soirée ?") { taille == 8 && dit.contains("Inès") },
+        cas("question", "Mon prochain rendez-vous médical c'est quand ?") { taille == 8 && dit.contains("Dentiste") },
+        cas("suite", "Ajoute un dîner vendredi à 20 h.", "C'est chez Paul, à Nancy.") { val r = rv("D*ner*").firstOrNull(); r != null && r.lieu.contains("Nancy") },
+        cas("suite", "Crée un rendez-vous chez le vétérinaire jeudi.", "À 17 h.") { jour(rv("*t*rinaire*").firstOrNull(), prochain(JEU), "17:00") },
+        cas("suite", "Qu'est-ce que j'ai cette semaine ?", "Supprime le foot de la liste.") { rv("Foot").isEmpty() && taille == 7 },
+        cas("piège", "Rappelle-moi pourquoi j'ai mis le dentiste.") { taille == 8 },
+        cas("piège", "Le foot c'est vraiment important pour moi.") { taille == 8 && rv("Foot").isNotEmpty() },
+    )
+
     /** Le contre-examen : écrit après les règles, mesuré avant toute retouche (une vérification de plus). */
     private val contreExamen: List<Cas> get() = listOf(
         cas("supprimer", "Bon ben supprime le coiffeur.") { rv("Coiffeur").isEmpty() && taille == 7 },
@@ -885,7 +919,7 @@ class CatalogueAssistantTest {
         val moteur = serveur?.moteur ?: MoteurIA { _, _ -> """{"actions":[],"reponse":""}""" }
         try {
             // EVERMIND_CATALOGUE=examen (ou contre-examen) : d'autres phrases au lieu de celles du PC
-            val liste = when (System.getenv("EVERMIND_CATALOGUE")) { "examen" -> examen; "contre-examen" -> contreExamen; "bases" -> bases; "bases-verif" -> basesVerif; "quotidien" -> quotidien; "quotidien-verif" -> quotidienVerif; "complexe" -> complexe; "complexe-verif" -> complexeVerif; "couverture" -> couverture; "couverture-verif" -> couvertureVerif; else -> catalogue }
+            val liste = when (System.getenv("EVERMIND_CATALOGUE")) { "examen" -> examen; "contre-examen" -> contreExamen; "bases" -> bases; "bases-verif" -> basesVerif; "quotidien" -> quotidien; "quotidien-verif" -> quotidienVerif; "complexe" -> complexe; "complexe-verif" -> complexeVerif; "couverture" -> couverture; "couverture-verif" -> couvertureVerif; "tour3" -> tour3; else -> catalogue }
             for (c in liste.filter { filtre == null || it.famille == filtre }) {
                 val assistant = Assistant(moteur, ::rappelsPc)
                 var agenda = exemple()
