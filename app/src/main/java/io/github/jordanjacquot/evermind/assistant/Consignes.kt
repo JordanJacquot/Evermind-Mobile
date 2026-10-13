@@ -18,7 +18,16 @@ const val SchemaIA = """{"type":"object","required":["actions","reponse"],"prope
 /** Les consignes de cette demande, et les codes (« e1fec9 ») qui désignent les rendez-vous. */
 class Contexte(val systeme: String, val codes: Map<String, String>)
 
+/** Les consignes du modèle entraîné pour Evermind : il a appris la tâche, une phrase suffit (au lieu de 2 300 jetons). */
+const val ConsignesCourtes = "Tu es l'assistant de l'agenda Evermind. Réponds seulement en JSON {\"actions\": [...], \"reponse\": \"...\"}."
+
 object Consignes {
+    /** Pour le modèle entraîné : la consigne courte, puis la date et l'agenda (les mêmes que pour les autres modèles). */
+    fun court(agenda: AgendaIA): Contexte {
+        val c = contexte(agenda)
+        return Contexte(ConsignesCourtes + "\n\n" + c.systeme.substringAfter(MoteurLlama.MARQUE_CACHE), c.codes)
+    }
+
     fun contexte(agenda: AgendaIA): Contexte {
         val today = agenda.aujourdHui
         val vus = mutableSetOf<String>()

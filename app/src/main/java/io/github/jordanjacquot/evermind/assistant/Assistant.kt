@@ -38,6 +38,8 @@ class Assistant(
      * assez solide (le plus petit modèle se trompe plus souvent que les règles qu'il contrôlerait).
      */
     private val controle: () -> Boolean = { true },
+    /** Les consignes données à l'IA : les longues (modèles généraux) ou les courtes (le modèle entraîné pour Evermind). */
+    private val consignes: () -> (AgendaIA) -> Contexte = { Consignes::contexte },
     /** Change les heures d'un poste (« mon poste du matin, c'est de 7 h à 15 h ») : le poste, puis « 7 h à 15 h ». */
     private val changerHoraire: ((String, String) -> Unit)? = null,
 ) {
@@ -164,7 +166,7 @@ class Assistant(
     private suspend fun demanderIA(texte: String, rendezVous: List<RendezVous>, maintenant: LocalDateTime): Pair<Resultat, List<RendezVous>>? {
         val agenda = AgendaIA(rendezVous, maintenant)
         val moteur = moteur ?: return null
-        val ctx = Consignes.contexte(agenda)
+        val ctx = consignes()(agenda)
         if (!conversationRecente(maintenant)) conversation.clear()
         val messages = listOf(MessageIA("system", ctx.systeme)) + conversation.takeLast(6) + MessageIA("user", texte)
         var envoyes = messages

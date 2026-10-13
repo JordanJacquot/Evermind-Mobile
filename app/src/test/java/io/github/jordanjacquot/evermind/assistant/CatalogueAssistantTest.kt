@@ -1247,7 +1247,7 @@ class CatalogueAssistantTest {
                 if (ph in ecartees) continue
                 val verif = intentionsGenerees[id] ?: continue
                 total++
-                val assistant = Assistant(moteur, ::rappelsPc, regles = System.getenv("EVERMIND_IA_SEULE") == null, controle = { System.getenv("EVERMIND_SANS_CONTROLE") == null })
+                val assistant = Assistant(moteur, ::rappelsPc, regles = System.getenv("EVERMIND_IA_SEULE") == null, controle = { System.getenv("EVERMIND_SANS_CONTROLE") == null }, consignes = { if (System.getenv("EVERMIND_CONSIGNES") == "courtes") Consignes::court else Consignes::contexte })
                 val r = runBlocking { assistant.demander(ph, exemple(), maintenant) }
                 val bon = runCatching { Fin(r?.second ?: exemple(), r?.first?.dit ?: "").verif() }.getOrDefault(false)
                 if (bon) bons++ else echecs += "ÉCHEC [$id] $ph\n    -> ${r?.first?.dit ?: "pas de réponse"}"
@@ -1286,7 +1286,7 @@ class CatalogueAssistantTest {
             for (c in liste.filter { filtre == null || it.famille == filtre }) {
                 // EVERMIND_IA_SEULE : sans les règles d'Evermind (pour comparer l'IA aux règles)
                 // EVERMIND_SANS_CONTROLE : les règles seules, même quand leur réponse est douteuse
-                val assistant = Assistant(moteur, ::rappelsPc, regles = System.getenv("EVERMIND_IA_SEULE") == null, controle = { System.getenv("EVERMIND_SANS_CONTROLE") == null })
+                val assistant = Assistant(moteur, ::rappelsPc, regles = System.getenv("EVERMIND_IA_SEULE") == null, controle = { System.getenv("EVERMIND_SANS_CONTROLE") == null }, consignes = { if (System.getenv("EVERMIND_CONSIGNES") == "courtes") Consignes::court else Consignes::contexte })
                 var agenda = exemple()
                 var dit = ""
                 val traces = mutableListOf<String>()
