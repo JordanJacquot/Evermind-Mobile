@@ -165,7 +165,13 @@ class Actions(
                             if (n != null && n.length < 40 && lu.personnes.any { n.contains(it) }) a.notes = null
                         }
                         val r = modifier(rv, a)
-                        if (!surCree) {
+                        // Seulement une liste (« lait, œufs, pain ») : on dit ce qui a été ajouté
+                        val seulementListe = a.chosesAPrendre.isNotEmpty() && a.phrase == null && a.titre == null && a.lieu == null && a.notes == null &&
+                            a.personnes.isEmpty() && a.rappels.isEmpty() && a.important == null
+                        if (seulementListe && !surCree) {
+                            val l = a.chosesAPrendre.joinToString(", ")
+                            dits += "C'est ajouté à ${titreDe(r)} : $l."; ecrits += "Ajouté à ${titreDe(r)} : $l."
+                        } else if (!surCree) {
                             val (e, d) = note(r)
                             dits += "C'est changé : $d."; ecrits += "C'est changé : $e."
                         }

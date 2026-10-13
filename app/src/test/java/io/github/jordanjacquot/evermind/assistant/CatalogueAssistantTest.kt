@@ -559,6 +559,33 @@ class CatalogueAssistantTest {
         cas("plusieurs", "Supprime le raid de demain, et à la place mets un cinéma à 21 h avec Léa.") { jour(rv("Cin*").firstOrNull(), lea, "21:00") },
         cas("plusieurs", "Le dentiste, mets-le à 16 h, ajoute que je dois prendre mes radios, et marque-le comme important.") { val r = rv("Dentiste")[0]; r.quand.hour == 16 && r.important && r.aPreparer.any { it.texte.contains("radio", true) } },
         cas("plusieurs", "Annule le foot et le coiffeur, mais garde le dentiste.") { rv("Foot").isEmpty() && rv("Coiffeur").isEmpty() && rv("Dentiste").isNotEmpty() },
+        // Une série créée puis enlevée en partie (essai de l'utilisateur, le 13 octobre 2026)
+        cas("série", "Mets un événement course d'octobre à novembre ${auj.year}, tous les lundis.", "Supprime les courses, les événements courses de novembre ${auj.year}.") {
+            val r = rv("Course*").firstOrNull(); r != null && entre(LocalDate.of(auj.year, 11, 1), LocalDate.of(auj.year, 12, 1)).none { it.rv.id == r.id } && entre(auj, LocalDate.of(auj.year, 11, 1)).any { it.rv.id == r.id } },
+        cas("série", "Mets un événement course d'octobre à novembre ${auj.year}, tous les lundis.", "Supprime les événements courses de novembre ${auj.year}.") {
+            val r = rv("Course*").firstOrNull(); r != null && entre(LocalDate.of(auj.year, 11, 1), LocalDate.of(auj.year, 12, 1)).none { it.rv.id == r.id } && rv("Foot").isNotEmpty() },
+        cas("série", "Mets un événement course d'octobre à novembre ${auj.year}, tous les lundis.", "Enlève tous les lundis de novembre pour les courses.") {
+            val r = rv("Course*").firstOrNull(); r != null && entre(LocalDate.of(auj.year, 11, 1), LocalDate.of(auj.year, 12, 1)).none { it.rv.id == r.id } },
+        cas("liste", "Mets un événement course d'octobre à novembre ${auj.year}, tous les lundis.", "Ajoute une liste de courses à l'événement course : lait, œufs, pain et beurre.") {
+            val r = rv("Course*").firstOrNull(); r != null && r.aPreparer.map { it.texte } == listOf("Lait", "Œufs", "Pain", "Beurre") && rep(r)?.jour == 1 },
+        cas("liste", "Mets un événement course d'octobre à novembre ${auj.year}, tous les lundis.", "Pour les courses, il faut acheter du lait, des œufs et du pain.") {
+            val r = rv("Course*").firstOrNull(); r != null && r.aPreparer.size == 3 && rep(r)?.jour == 1 },
+        cas("liste", "Mets un événement course d'octobre à novembre ${auj.year}, tous les lundis.", "Ajoute du lait et des œufs à la liste des courses.") {
+            rv("Course*").firstOrNull()?.aPreparer?.map { it.texte } == listOf("Lait", "Œufs") },
+        cas("liste", "Ajoute à la soirée chez Max la liste : chips, bières et glaçons.") { rv("Soirée chez Max")[0].aPreparer.size == 3 },
+        // Créer avec la liste (essai de l'utilisateur, le 13 octobre 2026)
+        cas("liste", "Crée-moi un événement course pour vendredi et tu mets, donc je veux pain, beurre, crème fraîche.") {
+            val r = rv("Courses").firstOrNull(); r != null && r.sorte == Sorte.A_FAIRE && r.aPreparer.map { it.texte } == listOf("Pain", "Beurre", "Crème fraîche") && r.quand.toLocalDate() == prochain(VEN) },
+        cas("liste", "Ajoute des courses vendredi avec la liste : pain, beurre, crème fraîche.") { rv("Courses").firstOrNull()?.aPreparer?.size == 3 },
+        cas("liste", "Mets un événement courses samedi matin, il faut acheter du pain, du beurre et de la crème fraîche.") { val r = rv("Courses").firstOrNull(); r != null && r.aPreparer.size == 3 },
+        cas("liste", "Crée une course vendredi et mets-y pain, beurre et crème fraîche.") { val r = rv("Courses").firstOrNull(); r != null && r.aPreparer.size == 3 && r.sorte == Sorte.A_FAIRE },
+        cas("liste", "Courses samedi à 10 h : lait, œufs, farine.") { jour(rv("Courses").firstOrNull(), prochain(SAM), "10:00") && rv("Courses")[0].aPreparer.size == 3 },
+        cas("liste", "Ajoute une course à pied dimanche à 9 h.") { rv("Course à pied").firstOrNull()?.sorte == Sorte.SPORT },
+        cas("liste", "Je dois faire les courses jeudi, il me faut des tomates, du riz et du poulet.") { val r = rv("Courses").firstOrNull(); r != null && r.aPreparer.size == 3 },
+        cas("liste", "Ajoute un événement courses lundi à 18 h avec du lait, des yaourts et des pommes.") { val r = rv("Courses").firstOrNull(); jour(r, prochain(LUN), "18:00") && r!!.aPreparer.size == 3 },
+        cas("liste", "Courses samedi à 10 h.", "Pour les courses de samedi, rajoute du café et du sucre.") { rv("Courses").firstOrNull()?.aPreparer?.map { it.texte } == listOf("Café", "Sucre") },
+        cas("liste", "Courses samedi à 10 h.", "Dans les courses, mets aussi du papier toilette et de la lessive.") { rv("Courses").firstOrNull()?.aPreparer?.size == 2 && jour(rv("Courses").firstOrNull(), prochain(SAM), "10:00") },
+        cas("liste", "Courses samedi à 10 h : café, sucre.", "Qu'est-ce que je dois acheter pour les courses ?") { taille == 9 && dit.contains("Café") },
         // Pièges
         cas("piège", "Je pensais supprimer le foot mais finalement non.") { rv("Foot").isNotEmpty() && taille == 8 },
         cas("piège", "Mon pote m'a demandé si le foot était annulé.") { rv("Foot").isNotEmpty() && taille == 8 },
