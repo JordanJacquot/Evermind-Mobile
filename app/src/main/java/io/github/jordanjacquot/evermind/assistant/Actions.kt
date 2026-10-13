@@ -88,7 +88,8 @@ class Actions(
             // « crée la réunion et ajoute Paul » : une modification qui accompagne une création vise le nouvel événement
             val surCree = cree != null && a.cible == null &&
                 ((a.action in listOf("modifier", "ouvrir") && rv == null) || (a.action == "modifier" && a.phrase == null && !inn.modif && !inn.supp))
-            if (surCree) rv = cree
+            // (la version à jour : chaque ordre après la création s'ajoute aux précédents)
+            if (surCree) rv = cree?.let { agenda.get(it.id) } ?: cree
             else if (a.cible == null && a.action !in listOf("creer", "annuler", "horaires") &&
                 actions.count { it.action !in listOf("creer", "annuler", "horaires") } == 1) rv = cible(rv, codes, "$texte ${rep.reponse}", agenda)
             val nom = rv?.let { titreDe(it) } ?: ""
@@ -239,6 +240,7 @@ class Actions(
         var rappels = p.rappels
         a.lieu?.let { lieu = it }
         val lienDit = a.lien
+        val finDite = a.finDite
         if (a.personnes.isNotEmpty()) avec = (avec + a.personnes).filter { it.isNotBlank() }.distinct()
         a.notes?.let { notes = it }
         if (a.chosesAPrendre.isNotEmpty()) aPreparer = (aPreparer + a.chosesAPrendre.filter { it.isNotBlank() }.map { majuscule(it) }).distinct()
@@ -267,7 +269,7 @@ class Actions(
         val creations: List<Pair<LocalDateTime, LocalDateTime?>> = when {
             p.blocs.size > 1 -> p.blocs.map { b -> b.debut.atTime(q.toLocalTime()) to (if (p.journee) b.fin.atStartOfDay() else b.fin.atTime(p.fin!!.toLocalTime())) }
             p.jours.size > 1 -> p.jours.map { j -> j.atTime(q.toLocalTime()) to null }
-            else -> listOf(q to p.fin)
+            else -> listOf(q to (finDite ?: p.fin))
         }
         var premier: RendezVous? = null
         for ((quand, fin) in creations) {
