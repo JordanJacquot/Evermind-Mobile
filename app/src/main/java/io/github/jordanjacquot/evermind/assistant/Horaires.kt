@@ -82,15 +82,20 @@ fun horairesTravail(texte: String, maintenant: LocalDateTime, horaires: Map<Stri
     // Les jours de travail (lundi à vendredi) d'une semaine, à partir d'aujourd'hui
     fun semaine(lundi: java.time.LocalDate) = (0..4).map { lundi.plusDays(it.toLong()) }.filter { !it.isBefore(today) }.map { "le " + it.format(fJour) }
     val lundi = lundiDe(today)
-    for (m in tous(t, "\\b(?:toute\\s+)?(?:la\\s+)?semaine\\s+prochaine\\b", ci = false)) ajoute(m.index, m.valeur.length, 'D', semaine(lundi.plusDays(7)))
-    for (m in tous(t, "\\b(?:toute\\s+)?(?:cette|la)\\s+semaine\\b", ci = false)) {
-        val j = semaine(lundi).ifEmpty { semaine(lundi.plusDays(7)) }
-        ajoute(m.index, m.valeur.length, 'D', j)
+    // « du lundi au jeudi la semaine prochaine » : ces jours-là de la semaine prochaine (pas toute la semaine)
+    val duAu = tous(t, "\\bdu\\s+(?<a>$RxJour)\\s+au\\s+(?<b>$RxJour)\\b", ci = false)
+    val prochaine = t.contient("\\bsemaine\\s+prochaine\\b")
+    if (duAu.isEmpty()) {
+        for (m in tous(t, "\\b(?:toute\\s+)?(?:la\\s+)?semaine\\s+prochaine\\b", ci = false)) ajoute(m.index, m.valeur.length, 'D', semaine(lundi.plusDays(7)))
+        for (m in tous(t, "\\b(?:toute\\s+)?(?:cette|la)\\s+semaine\\b", ci = false)) {
+            val j = semaine(lundi).ifEmpty { semaine(lundi.plusDays(7)) }
+            ajoute(m.index, m.valeur.length, 'D', j)
+        }
     }
-    for (m in tous(t, "\\bdu\\s+(?<a>$RxJour)\\s+au\\s+(?<b>$RxJour)\\b", ci = false)) {
+    for (m in duAu) {
         val a = jourSemaine(m.g("a")!!)
         val b = jourSemaine(m.g("b")!!)
-        var d = today
+        var d = if (prochaine) lundi.plusDays(7) else today
         while (d.dayOfWeek.value % 7 != a) d = d.plusDays(1)
         val j = mutableListOf<String>()
         for (k in 0 until 7) { j += "le " + d.format(fJour); if (d.dayOfWeek.value % 7 == b) break; d = d.plusDays(1) }

@@ -220,7 +220,7 @@ fun cible(rv: RendezVous?, codes: Map<String, String>, dit: String, agenda: Agen
  * tout ce qui tombe dans la période (Get-SuppressionsPeriode). null si la phrase ne demande pas ça.
  */
 fun suppressionsPeriode(texte: String, agenda: AgendaIA): List<ActionIA>? {
-    val m = trouve(texte.trim().replace('’', '\''), "\\b(?:supprim|suprim|efface|enl[èe]v|vide|annul|retir|vire)\\w*\\s+(?:moi\\s+)?(?:(?<tout>tous|toutes|tout|toute)\\s+)?(?:(?:mes|les)\\s+(?<quoi>rendez-vous|rdv|[ée]v[ée]nements?|trucs|activit[ée]s|cr[ée]neaux)|(?<toutb>tout ce que j'ai(?: de pr[ée]vu)?|tout mon agenda|mon agenda))\\s+(?<p>.+?)\\s*[.!?]?$")
+    val m = trouve(texte.trim().replace('’', '\''), "\\b(?:supprim|suprim|efface|enl[èe]v|vide|annul|retir|vire)\\w*\\s+(?:moi\\s+)?(?:(?<tout>tous|toutes|tout|toute)\\s+)?(?:(?:mes|les)\\s+(?<quoi>rendez-vous|rdv|[ée]v[ée]nements?|trucs|activit[ée]s|cr[ée]neaux)|(?<toutb>tout ce que j'ai(?: de pr[ée]vu)?|tout mon agenda|mon agenda|ma journ[ée]e|ma soir[ée]e|ma matin[ée]e|mon apr[èe]s-midi|mon week-end|ma semaine))\\s+(?<p>.+?)\\s*[.!?]?$")
     if (!m.ok) return null
     val per = lirePeriode(m.g("p")!!.remplace("^(?:(?:de|du|des|pour|pendant)\\s+|d')", ""), agenda.maintenant)
     if (per?.debut == null || per.fin == null) return null

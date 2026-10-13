@@ -38,6 +38,8 @@ class ActionIA(
     var retirerRappels: List<String> = emptyList()
     var retirerChoses: List<String> = emptyList()
     var chosesFaites: List<String> = emptyList()
+    /** Un lien (visio, Discord...) à mettre sur le rendez-vous. */
+    var lien: String? = null
     /** Des postes de travail (« je suis du matin lundi et mardi »), lus par Evermind. */
     var postes: List<Poste>? = null
 

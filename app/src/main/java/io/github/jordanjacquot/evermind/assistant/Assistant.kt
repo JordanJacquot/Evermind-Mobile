@@ -66,6 +66,8 @@ class Assistant(
         if (compris != null) {
             val res = Actions(agenda, rappelsParDefaut, annulations).appliquer(compris, emptyMap(), texte)
             retenir(rendezVous, agenda, compris, maintenant)
+            // « Crée un rendez-vous chez le garagiste » sans dire quand : la phrase attend son jour (« lundi à 8 h »)
+            memoire.incomplet = res.aCorriger
             return res to agenda.liste.toList()
         }
         val moteur = moteur ?: return null

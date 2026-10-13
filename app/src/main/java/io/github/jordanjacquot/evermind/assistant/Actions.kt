@@ -225,6 +225,7 @@ class Actions(
         var important = p.important
         var rappels = p.rappels
         a.lieu?.let { lieu = it }
+        val lienDit = a.lien
         if (a.personnes.isNotEmpty()) avec = (avec + a.personnes).filter { it.isNotBlank() }.distinct()
         a.notes?.let { notes = it }
         if (a.chosesAPrendre.isNotEmpty()) aPreparer = (aPreparer + a.chosesAPrendre.filter { it.isNotBlank() }.map { majuscule(it) }).distinct()
@@ -258,7 +259,7 @@ class Actions(
         var premier: RendezVous? = null
         for ((quand, fin) in creations) {
             val r = AgendaIA.nouveau(titreAffiche(titre), quand, p.repetition, io.github.jordanjacquot.evermind.donnees.Sorte.depuisCode(p.sorte), p.journee, maintenant).copy(
-                fin = fin, lieu = lieu, avec = avec, lien = p.lien, notes = notes, aPreparer = aPreparer.map { APreparer(it) },
+                fin = fin, lieu = lieu, avec = avec, lien = lienDit ?: p.lien, notes = notes, aPreparer = aPreparer.map { APreparer(it) },
                 rappels = rappels, important = important, naissance = p.naissance,
             )
             agenda.ajouter(r)
@@ -335,6 +336,7 @@ class Actions(
         }
         var r = rv.copy(quand = quand, repetition = rep?.versJson(), journee = journee, fin = fin)
         a.lieu?.let { r = r.copy(lieu = it) }
+        a.lien?.let { r = r.copy(lien = it) }
         if (a.personnes.isNotEmpty()) r = r.copy(avec = (rv.avec + a.personnes).filter { it.isNotBlank() }.distinct())
         a.notes?.let { r = r.copy(notes = listOf(rv.notes, it).filter { n -> n.isNotBlank() }.joinToString("\n")) }
         if (a.chosesAPrendre.isNotEmpty()) {
