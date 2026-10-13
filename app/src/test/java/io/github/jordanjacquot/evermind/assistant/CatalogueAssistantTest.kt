@@ -321,6 +321,85 @@ class CatalogueAssistantTest {
         cas("créer", "Rajoute une soirée jeux chez Tom samedi à 20 h.") { rv("*jeux*").isNotEmpty() && rv("Soirée chez Max").isNotEmpty() },
     )
 
+    /** Les demandes de tous les jours, sur tout l'agenda ou plusieurs rendez-vous à la fois. */
+    private val bases: List<Cas> get() = listOf(
+        // Tout supprimer
+        cas("tout", "Supprime tous les rendez-vous.") { taille == 0 },
+        cas("tout", "Supprime tous mes rendez-vous.") { taille == 0 },
+        cas("tout", "Supprime tout.") { taille == 0 },
+        cas("tout", "Efface tout mon agenda.") { taille == 0 },
+        cas("tout", "Vide mon agenda.") { taille == 0 },
+        cas("tout", "Supprime tous les événements.") { taille == 0 },
+        cas("tout", "Enlève tout ce qu'il y a dans l'agenda.") { taille == 0 },
+        cas("tout", "Supprime tous les rendez-vous.", "Annule.") { taille == 8 },
+        cas("tout", "Supprime tous les rendez-vous passés.") { rv("Coiffeur").isEmpty() && taille == 7 },
+        cas("tout", "Supprime tous les anniversaires.") { rv("Anniversaire de Léa").isEmpty() && taille == 7 },
+        cas("tout", "Supprime toutes les choses à faire.") { rv("Payer le loyer").isEmpty() && rv("Appeler maman").isEmpty() && taille == 6 },
+        cas("tout", "Supprime tout ce que j'ai cette semaine.") { rv("Dentiste").isEmpty() && rv("Coiffeur").isNotEmpty() },
+        cas("tout", "Annule tous mes rendez-vous de demain.") { entre(lea, lea.plusDays(1)).none { it.rv.sorte != Sorte.ANNIV } },
+        // Plusieurs à la fois
+        cas("plusieurs", "Supprime le dentiste et le foot.") { rv("Dentiste").isEmpty() && rv("Foot").isEmpty() && taille == 6 },
+        cas("plusieurs", "Supprime le foot, le dentiste et la soirée chez Max.") { taille == 5 && rv("Raid avec les potes").isNotEmpty() },
+        cas("plusieurs", "Efface le coiffeur et le raid.") { rv("Coiffeur").isEmpty() && rv("Raid avec les potes").isEmpty() && taille == 6 },
+        cas("plusieurs", "Mets le foot et le dentiste en important.") { rv("Foot")[0].important && rv("Dentiste")[0].important },
+        // Désigner autrement
+        cas("désigner", "Supprime le prochain rendez-vous.") { rv("Appeler maman").isEmpty() && taille == 7 },
+        cas("désigner", "Supprime le rendez-vous de 15 h.") { rv("Dentiste").isEmpty() && taille == 7 },
+        cas("désigner", "Décale le rendez-vous de 19 h à 20 h.") { jour(rv("Foot").firstOrNull(), foot, "20:00") },
+        cas("désigner", "Supprime le rendez-vous avec Inès.") { rv("Soirée chez Max").isEmpty() && taille == 7 },
+        // Changer, dit simplement
+        cas("changer", "Mets le foot jeudi.") { jour(rv("Foot").firstOrNull(), prochain(JEU), "19:00") },
+        cas("changer", "Mets le foot demain.") { jour(rv("Foot").firstOrNull(), auj.plusDays(1), "19:00") },
+        cas("changer", "Change le foot en tennis.") { rv("Tennis").isNotEmpty() && rv("Foot").isEmpty() },
+        cas("changer", "Le dentiste est déplacé à jeudi.") { jour(rv("Dentiste").firstOrNull(), prochain(JEU), "15:00") },
+        cas("changer", "Décale le foot.") { taille == 8 && jour(rv("Foot").firstOrNull(), foot, "19:00") && dit.isNotBlank() },
+        cas("changer", "Le foot c'est demain à 18 h.") { jour(rv("Foot").firstOrNull(), auj.plusDays(1), "18:00") },
+        // Questions de tous les jours
+        cas("question", "Quel est mon prochain rendez-vous ?") { taille == 8 && dit.contains("maman", true) },
+        cas("question", "C'est quoi mon prochain rendez-vous ?") { taille == 8 && dit.contains("maman", true) },
+        cas("question", "Liste mes rendez-vous.") { taille == 8 && dit.contains("Dentiste") && dit.contains("Foot") },
+        cas("question", "Montre-moi mon agenda.") { taille == 8 && dit.contains("Dentiste") },
+        cas("question", "Qu'est-ce que j'ai de prévu ?") { taille == 8 && dit.contains("Dentiste") },
+        cas("question", "J'ai combien de rendez-vous ?") { taille == 8 && dit.contains(Regex("\\d")) },
+        cas("question", "Quels sont mes rendez-vous de la semaine prochaine ?") { taille == 8 },
+        cas("question", "J'ai des rendez-vous demain ?") { taille == 8 && dit.contains(Regex("Léa|raid", RegexOption.IGNORE_CASE)) },
+        cas("question", "Est-ce que j'ai quelque chose ce soir ?") { taille == 8 },
+        cas("question", "Quel jour on est ?") { taille == 8 && dit.contains("${auj.dayOfMonth}") },
+        cas("question", "Quelle heure il est ?") { taille == 8 && dit.contains("${LocalTime.now().hour}") },
+        cas("question", "C'est quand l'anniversaire de Léa ?") { taille == 8 && (dit.contains("demain") || dit.contains("${lea.dayOfMonth}")) },
+        cas("question", "Quels sont mes anniversaires ?") { taille == 8 && dit.contains("Léa") },
+        cas("question", "Qu'est-ce que j'ai à faire ?") { taille == 8 && dit.contains("loyer", true) },
+        // Créer, dit simplement
+        cas("créer", "Rendez-vous chez le médecin demain à 10 h.") { jour(rv("*decin*").firstOrNull(), auj.plusDays(1), "10:00") },
+        cas("créer", "Ajoute un rendez-vous demain.") { taille in 8..9 },
+        cas("créer", "Nouveau rendez-vous : garage lundi à 8 h.") { jour(rv("*arage*").firstOrNull(), prochain(LUN), "08:00") },
+        cas("créer", "Je vais au cinéma samedi à 21 h.") { jour(rv("*in*ma*").firstOrNull(), prochain(SAM), "21:00") },
+    )
+
+    /** Les mêmes familles que « bases », dites autrement (écrites après les règles, mesurées avant retouche). */
+    private val basesVerif: List<Cas> get() = listOf(
+        cas("tout", "Efface tous mes rendez-vous.") { taille == 0 },
+        cas("tout", "Tu peux supprimer tous les rendez-vous ?") { taille == 0 },
+        cas("tout", "Supprime l'agenda en entier.") { taille == 0 || taille == 8 },
+        cas("tout", "Retire tous les trucs passés.") { rv("Coiffeur").isEmpty() && taille == 7 },
+        cas("tout", "Supprime tous mes anniversaires.") { rv("Anniversaire de Léa").isEmpty() && taille == 7 },
+        cas("tout", "Efface tous les rendez-vous de la semaine prochaine.") { rv("Coiffeur").isNotEmpty() && rv("Dentiste").isNotEmpty() || taille < 8 },
+        cas("plusieurs", "Supprime le coiffeur et le dentiste.") { rv("Coiffeur").isEmpty() && rv("Dentiste").isEmpty() && taille == 6 },
+        cas("plusieurs", "Enlève la soirée chez Max et le foot.") { rv("Soirée chez Max").isEmpty() && rv("Foot").isEmpty() && taille == 6 },
+        cas("plusieurs", "Décale le foot et le dentiste à 18 h.") { jour(rv("Foot").firstOrNull(), foot, "18:00") && jour(rv("Dentiste").firstOrNull(), dentiste, "18:00") },
+        cas("plusieurs", "J'ai payé le loyer et appelé maman.") { rv("Payer le loyer")[0].fait && rv("Appeler maman")[0].fait },
+        cas("désigner", "Supprime mon prochain rendez-vous.") { rv("Appeler maman").isEmpty() && taille == 7 },
+        cas("désigner", "Décale le rendez-vous de 15 h à 16 h.") { jour(rv("Dentiste").firstOrNull(), dentiste, "16:00") },
+        cas("désigner", "Annule le rendez-vous avec Tom.") { rv("Soirée chez Max").isEmpty() && taille == 7 },
+        cas("question", "C'est quoi mon prochain truc ?") { taille == 8 && dit.contains("maman", true) },
+        cas("question", "Montre-moi mes rendez-vous.") { taille == 8 && dit.contains("Foot") },
+        cas("question", "Il est quelle heure ?") { taille == 8 && dit.contains("${LocalTime.now().hour}") },
+        cas("question", "On est le combien aujourd'hui ?") { taille == 8 && dit.contains("${auj.dayOfMonth}") },
+        cas("question", "J'ai combien de trucs de prévus ?") { taille == 8 && dit.contains(Regex("\\d")) },
+        cas("question", "Quelles sont mes tâches ?") { taille == 8 && dit.contains("loyer", true) },
+        cas("changer", "Remplace le foot par du basket.") { rv("*asket*").isNotEmpty() && rv("Foot").isEmpty() },
+    )
+
     /** Le contre-examen : écrit après les règles, mesuré avant toute retouche (une vérification de plus). */
     private val contreExamen: List<Cas> get() = listOf(
         cas("supprimer", "Bon ben supprime le coiffeur.") { rv("Coiffeur").isEmpty() && taille == 7 },
@@ -446,7 +525,7 @@ class CatalogueAssistantTest {
         val moteur = serveur?.moteur ?: MoteurIA { _, _ -> """{"actions":[],"reponse":""}""" }
         try {
             // EVERMIND_CATALOGUE=examen (ou contre-examen) : d'autres phrases au lieu de celles du PC
-            val liste = when (System.getenv("EVERMIND_CATALOGUE")) { "examen" -> examen; "contre-examen" -> contreExamen; else -> catalogue }
+            val liste = when (System.getenv("EVERMIND_CATALOGUE")) { "examen" -> examen; "contre-examen" -> contreExamen; "bases" -> bases; "bases-verif" -> basesVerif; else -> catalogue }
             for (c in liste.filter { filtre == null || it.famille == filtre }) {
                 val assistant = Assistant(moteur, ::rappelsPc)
                 var agenda = exemple()

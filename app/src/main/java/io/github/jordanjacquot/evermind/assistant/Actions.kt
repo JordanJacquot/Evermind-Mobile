@@ -80,6 +80,9 @@ class Actions(
         val change = actions.any { it.action != "annuler" }
         if (change) sauverAnnulation()
         val inn = intentions(texte)
+        // Beaucoup de suppressions d'un coup (« supprime tout ») : une seule phrase pour toutes
+        val enGroupe = actions.count { it.action == "supprimer" && it.periode == null } >= 3
+        val supprimes = mutableListOf<String>()
         for (a in actions) {
             var rv: RendezVous? = a.cible?.let { agenda.get(it.id) } ?: a.code()?.let { codes[it] }?.let { agenda.get(it) }
             // « crée la réunion et ajoute Paul » : une modification qui accompagne une création vise le nouvel événement
@@ -124,6 +127,7 @@ class Actions(
                 a.action == "supprimer" -> {
                     val p = a.periode
                     if (p != null) { val (d, e) = supprimerPeriode(rv, p); dits += d; ecrits += e }
+                    else if (enGroupe) { agenda.supprimer(rv.id); supprimes += nom }
                     else {
                         agenda.supprimer(rv.id)
                         val tout = if (rv.repetition != null) " (toutes les fois)" else ""
@@ -168,6 +172,10 @@ class Actions(
                     }
                 }
             }
+        }
+        if (supprimes.isNotEmpty()) {
+            dits += "J'ai supprimé ${supprimes.size} rendez-vous."
+            ecrits += "Supprimés (${supprimes.size}) : ${supprimes.joinToString(", ")}. (Dis « annule » pour revenir en arrière.)"
         }
         if (actions.isEmpty()) {
             val t = rep.reponse.ifBlank { "Je n'ai pas compris, tu peux reformuler ?" }
