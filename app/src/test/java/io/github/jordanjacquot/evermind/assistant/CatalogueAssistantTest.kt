@@ -1174,6 +1174,92 @@ class CatalogueAssistantTest {
         else -> listOf("veille", "matin", "m60")
     }
 
+    /** Ce qui doit se passer pour chaque intention des phrases écrites par l'IA (outils/generer-phrases.py). */
+    private val intentionsGenerees: Map<String, Fin.() -> Boolean> = mapOf(
+        "c1" to { rv("*entiste*").any { jour(it, prochain(VEN), "10:30") } && rv("Dentiste").any { jour(it, dentiste, "15:00") } },
+        "c2" to { val r = agenda.firstOrNull { it.quand.dayOfWeek == SAM && it.quand.hour == 20 }; r != null && r.avec.any { it.equals("Julie", true) } },
+        "c3" to { val r = agenda.firstOrNull { it.titre.contains("uitare", true) }; rep(r)?.jour == 3 && r!!.quand.hour == 18 },
+        "c4" to { val r = agenda.firstOrNull { it.titre.contains("lectricit", true) || it.titre.contains("facture", true) }; rep(r)?.type == "mois" && rep(r)?.jour == 10 },
+        "c5" to { val r = agenda.firstOrNull { it.titre.contains("Thomas") }; r != null && r.sorte == Sorte.ANNIV && r.naissance == le(3, 3).year - 40 },
+        "c6" to { val r = agenda.firstOrNull { it.titre.contains("ourse", true) }; r != null && r.quand.dayOfWeek == SAM && r.quand.hour == 10 && r.aPreparer.size == 3 },
+        "c7" to { val r = agenda.firstOrNull { it.titre.contains("union", true) }; jour(r, prochain(LUN), "09:00") && r!!.fin?.hour == 11 && r.lieu.contains("Metz") },
+        "c8" to { val r = agenda.firstOrNull { it.titre.contains("acances", true) }; r != null && r.quand.dayOfMonth == 20 && r.fin?.dayOfMonth == 27 },
+        "c9" to { val r = agenda.firstOrNull { it.titre.contains("phtalmo", true) }; jour(r, le(5, 11), "14:00") && r!!.important },
+        "c10" to { agenda.any { it.titre.contains("ooting", true) && jour(it, auj.plusDays(1), "07:00") } },
+        "m1" to { jour(rv("Foot").firstOrNull(), prochain(DayOfWeek.SUNDAY), "19:00") && taille == 8 },
+        "m2" to { jour(rv("Dentiste").firstOrNull(), dentiste, "16:00") },
+        "m3" to { jour(rv("Dentiste").firstOrNull(), dentiste, "17:00") },
+        "m4" to { rv("Foot").firstOrNull()?.lieu?.contains("Woippy") == true },
+        "m5" to { "Paul" in rv("Soirée chez Max")[0].avec },
+        "m6" to { val a = rv("Soirée chez Max")[0].avec; "Tom" !in a && "Max" in a && "Inès" in a },
+        "m7" to { rv("Dentiste")[0].aPreparer.any { it.texte.contains("radio", true) } },
+        "m8" to { rv("Foot")[0].important },
+        "m9" to { rv("Soirée chez Max")[0].rappels?.contains("veille") == true },
+        "m10" to { agenda.any { it.titre.equals("Match de foot", true) } && rv("Foot").isEmpty() },
+        "m11" to { rep(rv("Raid avec les potes").firstOrNull())?.jour == 4 },
+        "m12" to { rep(rv("Payer le loyer").firstOrNull())?.jour == 5 },
+        "m13" to { rv("Dentiste")[0].fin?.toLocalTime() == LocalTime.of(16, 0) && rv("Dentiste")[0].quand.hour == 15 },
+        "m14" to { jour(rv("Soirée chez Max").firstOrNull(), soiree, "20:30") },
+        "m15" to { rv("Dentiste")[0].notes.contains("tartrage", true) },
+        "s1" to { rv("Foot").isEmpty() && taille == 7 },
+        "s2" to { rv("Coiffeur").isEmpty() && taille == 7 },
+        "s3" to { val r = rv("Raid avec les potes").firstOrNull(); r != null && entre(lea, lea.plusDays(1)).none { it.rv.id == r.id } && entre(lea.plusDays(7), lea.plusDays(8)).any { it.rv.id == r.id } },
+        "s4" to { (rep(rv("Raid avec les potes").firstOrNull())?.sauf?.count { it.contains("-11-") } ?: 0) >= 4 },
+        "s5" to { rep(rv("Raid avec les potes").firstOrNull())?.jusqua?.endsWith("-12-31") == true },
+        "s6" to { entre(lea, lea.plusDays(1)).none { it.rv.sorte != Sorte.ANNIV } && rv("Foot").isNotEmpty() },
+        "s7" to { rv("Soirée chez Max").isEmpty() && taille == 7 },
+        "f1" to { rv("Payer le loyer")[0].fait },
+        "f2" to { rv("Appeler maman")[0].fait },
+        "q1" to { taille == 8 && dit.contains(Regex("Léa|raid", RegexOption.IGNORE_CASE)) },
+        "q2" to { taille == 8 && (dit.contains("${dentiste.dayOfMonth}") || dit.contains(nomJour(dentiste), true)) },
+        "q3" to { taille == 8 && dit.contains("Lilas") },
+        "q4" to { taille == 8 && dit.contains("Inès") },
+        "q5" to { taille == 8 && dit.contains("4521B") },
+        "q6" to { taille == 8 && dit.contains("rdonnance") },
+        "q7" to { taille == 8 && dit.contains("24") },
+        "q8" to { taille == 8 && dit.contains("maman", true) },
+        "q9" to { taille == 8 && dit.contains("Foot") },
+        "n1" to { taille == 8 && jour(rv("Foot").firstOrNull(), foot, "19:00") },
+        "n2" to { taille == 8 && rv("Dentiste").isNotEmpty() },
+        "n3" to { taille == 8 },
+    )
+
+    /**
+     * Les phrases écrites par l'IA (EVERMIND_GENERE : un fichier .jsonl de outils/generer-phrases.py), chacune vérifiée
+     * selon son intention. EVERMIND_ECARTEES : les phrases mal écrites par l'IA (une par ligne), comptées à part.
+     */
+    @Test fun generees() {
+        val f = System.getenv("EVERMIND_GENERE")?.let { File(it) }
+        assumeTrue("pas de phrases générées (EVERMIND_GENERE)", f != null && f.exists())
+        val ecartees = System.getenv("EVERMIND_ECARTEES")?.let { File(it) }?.takeIf { it.exists() }?.readLines(Charsets.UTF_8)?.map { it.trim() }?.toSet().orEmpty()
+        val exe = System.getenv("EVERMIND_LLAMA_SERVEUR")
+        val modele = System.getenv("EVERMIND_LLAMA_MODELE")
+        val serveur = if (exe != null && modele != null && System.getenv("EVERMIND_SANS_IA") == null) Serveur(exe, modele, System.getenv("EVERMIND_LLAMA_OPTIONS") ?: "") else null
+        val moteur = serveur?.moteur ?: MoteurIA { _, _ -> """{"actions":[],"reponse":""}""" }
+        val echecs = mutableListOf<String>()
+        var bons = 0
+        var total = 0
+        try {
+            for (ligne in f!!.readLines(Charsets.UTF_8).filter { it.isNotBlank() }) {
+                val o = Json.parseToJsonElement(ligne).jsonObject
+                val id = o["id"]!!.jsonPrimitive.content
+                val ph = o["phrase"]!!.jsonPrimitive.content
+                if (ph in ecartees) continue
+                val verif = intentionsGenerees[id] ?: continue
+                total++
+                val assistant = Assistant(moteur, ::rappelsPc, regles = System.getenv("EVERMIND_IA_SEULE") == null, controle = { System.getenv("EVERMIND_SANS_CONTROLE") == null })
+                val r = runBlocking { assistant.demander(ph, exemple(), maintenant) }
+                val bon = runCatching { Fin(r?.second ?: exemple(), r?.first?.dit ?: "").verif() }.getOrDefault(false)
+                if (bon) bons++ else echecs += "ÉCHEC [$id] $ph\n    -> ${r?.first?.dit ?: "pas de réponse"}"
+            }
+        } finally {
+            serveur?.close()
+        }
+        echecs.forEach { println(it) }
+        println("Phrases générées : $bons / $total (${ecartees.size} écartées)")
+        File("build/generees.txt").writeText((echecs + "Phrases générées : $bons / $total").joinToString("\n"))
+    }
+
     private val correcteur by lazy {
         io.github.jordanjacquot.evermind.voix.Correcteur.lire(
             File("src/main/assets/lexique/communes.txt").readLines().asSequence(),
