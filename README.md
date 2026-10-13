@@ -46,7 +46,8 @@ Le code est dans `app/src/main/java/io/github/jordanjacquot/evermind/` :
 - `ui/agenda/` : l'écran principal (barre où l'on écrit un rendez-vous, calendrier du mois, « À venir » ou le jour choisi).
 - `ui/fiche/` : la fiche d'un rendez-vous (détails, choses à préparer, supprimer).
 - `ui/formulaire/` : ajouter ou modifier à la main.
-- `ui/theme/` : couleurs ; `ui/Textes.kt` : dates et heures écrites en français (« demain à 15 h 30 ») ;
+- `ui/theme/` : la DA d'Evermind PC (fond de nuit, panneaux en verre, boutons en dégradé, icônes des sortes, logo) et ses
+  5 thèmes, avec la même « traduction » des couleurs que sur PC ; `ui/Textes.kt` : dates et heures écrites en français (« demain à 15 h 30 ») ;
   `ui/Navigation.kt` : les écrans et le passage de l'un à l'autre.
 
 - `voix/` : la dictée du téléphone, les modèles (`Modeles`, versions et empreintes fixées) et leur installation,
@@ -64,6 +65,9 @@ L'assistant (étape 5) aura son dossier `assistant/`.
   (« Annuler » juste après). Il manque l'heure ? Evermind le dit, ou on complète dans le formulaire.
   La lecture donne exactement la même chose qu'Evermind PC sur les 3 072 phrases de ses catalogues.
   Les rendez-vous qui reviennent s'affichent à chaque fois dans le calendrier.
+- **La DA d'Evermind PC** : fond de nuit et ses lueurs, panneaux en verre, boutons pilule en dégradé, logo E dans son
+  anneau, cartes et fiche aux couleurs des sortes, calendrier en tuiles ; les 5 thèmes du PC (Néon, Crépuscule,
+  Terminal, Arcade, Rubis) au choix dans les Réglages, appliqués tout de suite.
 - **Rappels** (étape 3), comme sur PC : la veille à 20 h, le matin même à 8 h, 1 h avant (à l'heure pour une chose
   à faire) ; chacun se coupe dans les Réglages. Chaque rendez-vous peut avoir les siens (formulaire, ou « rappelle-moi
   2 jours avant »), ou aucun. Notification aux couleurs de la sorte, avec « Voir » et « Dans 10 min » ; à l'heure

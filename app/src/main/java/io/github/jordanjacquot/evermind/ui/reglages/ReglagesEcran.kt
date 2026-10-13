@@ -1,6 +1,24 @@
 package io.github.jordanjacquot.evermind.ui.reglages
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import io.github.jordanjacquot.evermind.ui.theme.BoutonAccent
+import io.github.jordanjacquot.evermind.ui.theme.CouleursEvermind
+import io.github.jordanjacquot.evermind.ui.theme.ThemeEvermind
+import io.github.jordanjacquot.evermind.ui.theme.Themes
+import io.github.jordanjacquot.evermind.ui.theme.Verre
+import io.github.jordanjacquot.evermind.ui.theme.ev
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -77,99 +95,143 @@ fun ReglagesEcran(retour: () -> Unit) {
     val eveilPret = etatEveil.let { voix.eveilInstalle }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             TopAppBar(
                 title = { Text("Réglages") },
                 navigationIcon = { IconButton(onClick = retour) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Retour") } },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
             )
         },
     ) { marges ->
         Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxSize().padding(marges).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.fillMaxSize().padding(marges).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
-            Text("Rappels", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Text(
-                "Les rappels donnés par défaut. Pour un rendez-vous en particulier, tu peux en choisir d'autres dans son " +
-                    "formulaire (ou les dire : « rappelle-moi 2 jours avant »).",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (!notificationsPermises) {
-                Text("Evermind n'a pas le droit d'envoyer des notifications : aucun rappel ne s'affichera.",
-                    color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    Button(onClick = { demande.launch(Manifest.permission.POST_NOTIFICATIONS) }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Autoriser les notifications")
-                    }
-                }
-            }
-            Ligne("La veille à 20 h", veille) { veille = it; rappels.veille = it; Planificateur.reprogrammer(app) }
-            Ligne("Le matin même à 8 h", matin) { matin = it; rappels.matin = it; Planificateur.reprogrammer(app) }
-            Ligne("1 h avant", heureAvant) { heureAvant = it; rappels.heureAvant = it; Planificateur.reprogrammer(app) }
-            Text(
-                "Les choses à faire avec une heure sont rappelées à l'heure même.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("La voix", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Text(
-                "Pour parler à Evermind comme sur PC : la dictée Whisper et la voix naturelle Kokoro. " +
-                    "Téléchargées une seule fois, ensuite tout marche sans Internet et rien ne quitte le téléphone.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Installer(
-                titre = "Installer la voix (${enMo(Modeles.taille(Pack.VOIX))})",
-                pret = voixPrete,
-                pretTexte = "La voix est installée : le micro utilise Whisper, et Evermind te répond.",
-                etat = etatVoix,
-                lancer = { voix.installation.lancer(Pack.VOIX) { voix.prechauffer() } },
-            )
-            if (voixPrete) {
-                Ligne("Evermind répond à voix haute", repondre) { voix.activerReponse(it) }
-                Text("Voix", style = MaterialTheme.typography.labelLarge)
-                VoixKokoro.entries.forEach { v ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().clickable { voix.choisirVoix(v) },
-                    ) {
-                        RadioButton(selected = v == choisie, onClick = { voix.choisirVoix(v) })
-                        Column(Modifier.weight(1f)) {
-                            Text(v.nom)
-                            Text(v.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        IconButton(onClick = { scope.launch { runCatching { voix.essayer(v) } } }) {
-                            Icon(Icons.Default.PlayArrow, "Écouter ${v.nom}")
+            Section("Thème", "Les couleurs d'Evermind, les mêmes thèmes que sur PC. Tes rendez-vous et réglages ne changent pas.") {
+                val themeChoisi by app.theme.collectAsStateWithLifecycle()
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Themes.chunked(2).forEach { ligne ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            ligne.forEach { t ->
+                                CarteTheme(t, t.id == themeChoisi, Modifier.weight(1f)) { app.choisirTheme(t.id) }
+                            }
+                            if (ligne.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
                 }
             }
 
-            HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Text("« OK Evermind »", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            Text(
-                "Dis « OK Evermind » quand l'agenda est à l'écran, puis ta demande. Une petite écoute sur le téléphone ne " +
-                    "reconnaît que ces mots-là ; tout le reste est oublié aussitôt, rien n'est enregistré.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            if (!voixPrete) {
-                Text("Installe d'abord la voix.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            } else {
+            Section("Rappels", "Les rappels donnés par défaut. Pour un rendez-vous en particulier, tu peux en choisir d'autres dans son formulaire (ou les dire : « rappelle-moi 2 jours avant »).") {
+                if (!notificationsPermises) {
+                    Text("Evermind n'a pas le droit d'envoyer des notifications : aucun rappel ne s'affichera.",
+                        color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        BoutonAccent("Autoriser les notifications", { demande.launch(Manifest.permission.POST_NOTIFICATIONS) }, Modifier.padding(vertical = 6.dp))
+                    }
+                }
+                Ligne("La veille à 20 h", veille) { veille = it; rappels.veille = it; Planificateur.reprogrammer(app) }
+                Ligne("Le matin même à 8 h", matin) { matin = it; rappels.matin = it; Planificateur.reprogrammer(app) }
+                Ligne("1 h avant", heureAvant) { heureAvant = it; rappels.heureAvant = it; Planificateur.reprogrammer(app) }
+                Text("Les choses à faire avec une heure sont rappelées à l'heure même.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            Section("La voix", "Pour parler à Evermind comme sur PC : la dictée Whisper et la voix naturelle Kokoro. Téléchargées une seule fois, ensuite tout marche sans Internet et rien ne quitte le téléphone.") {
                 Installer(
-                    titre = "Installer « OK Evermind » (${enMo(Modeles.taille(Pack.EVEIL))})",
-                    pret = eveilPret,
-                    pretTexte = null,
-                    etat = etatEveil,
-                    lancer = { voix.installation.lancer(Pack.EVEIL) { voix.activerEveil(true) } },
+                    titre = "Installer la voix (${enMo(Modeles.taille(Pack.VOIX))})",
+                    pret = voixPrete,
+                    pretTexte = "La voix est installée : le micro utilise Whisper, et Evermind te répond.",
+                    etat = etatVoix,
+                    lancer = { voix.installation.lancer(Pack.VOIX) { voix.prechauffer() } },
                 )
-                if (eveilPret) Ligne("Écouter « OK Evermind »", eveilActif) { voix.activerEveil(it) }
+                if (voixPrete) {
+                    Ligne("Evermind répond à voix haute", repondre) { voix.activerReponse(it) }
+                    VoixKokoro.entries.forEach { v ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().clickable { voix.choisirVoix(v) },
+                        ) {
+                            RadioButton(selected = v == choisie, onClick = { voix.choisirVoix(v) })
+                            Column(Modifier.weight(1f)) {
+                                Text(v.nom)
+                                Text(v.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            IconButton(onClick = { scope.launch { runCatching { voix.essayer(v) } } }) {
+                                Icon(Icons.Default.PlayArrow, "Écouter ${v.nom}", tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
+                    }
+                }
             }
+
+            Section("« OK Evermind »", "Dis « OK Evermind » quand l'agenda est à l'écran, puis ta demande. Une petite écoute sur le téléphone ne reconnaît que ces mots-là ; tout le reste est oublié aussitôt, rien n'est enregistré.") {
+                if (!voixPrete) {
+                    Text("Installe d'abord la voix.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Installer(
+                        titre = "Installer « OK Evermind » (${enMo(Modeles.taille(Pack.EVEIL))})",
+                        pret = eveilPret,
+                        pretTexte = null,
+                        etat = etatEveil,
+                        lancer = { voix.installation.lancer(Pack.EVEIL) { voix.activerEveil(true) } },
+                    )
+                    if (eveilPret) Ligne("Écouter « OK Evermind »", eveilActif) { voix.activerEveil(it) }
+                }
+            }
+            Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+/** Une section des réglages : un panneau de verre, son titre et ce qu'elle fait. */
+@Composable
+private fun Section(titre: String, description: String, contenu: @Composable ColumnScope.() -> Unit) {
+    Verre(modifier = Modifier.fillMaxWidth()) {
+        Text(titre, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ev.texte)
+        Text(description, style = MaterialTheme.typography.bodySmall, color = ev.discret, modifier = Modifier.padding(top = 4.dp, bottom = 10.dp))
+        contenu()
+    }
+}
+
+/** Un thème, avec son petit aperçu comme sur PC : le logo, un bouton, quelques cases du calendrier et une carte. */
+@Composable
+private fun CarteTheme(t: ThemeEvermind, choisi: Boolean, modifier: Modifier, choisir: () -> Unit) {
+    val ce = CouleursEvermind(t)
+    val forme = RoundedCornerShape(16.dp)
+    Column(
+        modifier
+            .clip(forme)
+            .background(Color.White.copy(alpha = if (choisi) 0.10f else 0.04f))
+            .border(if (choisi) 2.dp else 1.dp, if (choisi) Brush.linearGradient(listOf(ce.p, ce.s)) else Brush.linearGradient(listOf(Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.05f))), forme)
+            .clickable(onClick = choisir)
+            .padding(8.dp),
+    ) {
+        // L'aperçu
+        Box(
+            Modifier.fillMaxWidth().height(70.dp).clip(RoundedCornerShape(10.dp))
+                .background(Brush.linearGradient(listOf(ce.fondHaut, ce.fondBas)))
+                .background(Brush.radialGradient(listOf(ce.p.copy(alpha = 0.35f), Color.Transparent), radius = 160f, center = androidx.compose.ui.geometry.Offset(60f, 20f)))
+                .background(Brush.radialGradient(listOf(ce.t.copy(alpha = 0.35f), Color.Transparent), radius = 180f, center = androidx.compose.ui.geometry.Offset(400f, 200f)))
+                .padding(8.dp),
+        ) {
+            Box(Modifier.size(18.dp).border(2.dp, Brush.sweepGradient(listOf(ce.p, ce.s, ce.t, ce.p)), CircleShape))
+            Box(Modifier.align(Alignment.TopEnd).size(width = 40.dp, height = 8.dp).clip(CircleShape).background(Brush.horizontalGradient(listOf(ce.p, ce.s))))
+            Row(Modifier.align(Alignment.BottomStart), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                listOf(ce.p, Color.Transparent, ce.t, ce.s, Color.Transparent).forEach { barre ->
+                    Column(Modifier.size(14.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = 0.08f)), verticalArrangement = Arrangement.Bottom) {
+                        Box(Modifier.fillMaxWidth().height(3.dp).background(barre))
+                    }
+                }
+            }
+            Box(Modifier.align(Alignment.BottomEnd).size(26.dp).clip(RoundedCornerShape(6.dp)).background(ce.t.copy(alpha = 0.25f)).border(1.dp, ce.t.copy(alpha = 0.6f), RoundedCornerShape(6.dp)))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+            Text(t.nom, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, fontFamily = t.police)
+            if (choisi) Text("  ✓", color = ce.p, fontWeight = FontWeight.Bold)
+        }
+        Text(t.description, style = MaterialTheme.typography.labelSmall, color = ev.discret, maxLines = 3)
     }
 }
 
@@ -190,7 +252,7 @@ private fun Installer(titre: String, pret: Boolean, pretTexte: String?, etat: Et
         }
         else -> {
             if (etat is EtatInstallation.Echec) Text(etat.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            Button(onClick = lancer, modifier = Modifier.fillMaxWidth()) { Text(titre) }
+            BoutonAccent(titre, lancer, Modifier.padding(top = 4.dp))
         }
     }
 }

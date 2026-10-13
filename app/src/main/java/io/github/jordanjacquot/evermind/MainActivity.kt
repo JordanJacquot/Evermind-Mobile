@@ -4,6 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.jordanjacquot.evermind.ui.theme.FondEvermind
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -17,10 +21,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Barres du téléphone transparentes, icônes claires : le fond de nuit va jusqu'en haut
+        enableEdgeToEdge(SystemBarStyle.dark(android.graphics.Color.TRANSPARENT), SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         if (savedInstanceState == null) ficheDemandee = intent.getStringExtra(Notifications.EXTRA_FICHE)
+        val app = application as EvermindApp
         setContent {
-            EvermindTheme {
-                EvermindNavigation(ficheDemandee = ficheDemandee, ficheOuverte = { ficheDemandee = null })
+            val theme by app.theme.collectAsStateWithLifecycle()
+            EvermindTheme(theme) {
+                // Le fond de nuit d'Evermind, derrière tous les écrans
+                FondEvermind {
+                    EvermindNavigation(ficheDemandee = ficheDemandee, ficheOuverte = { ficheDemandee = null })
+                }
             }
         }
     }

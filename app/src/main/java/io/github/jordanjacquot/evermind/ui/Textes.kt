@@ -50,7 +50,7 @@ fun YearMonth.enTexte(): String = majuscule(atDay(1).format(MoisAnnee))
  * Quand a lieu ce rendez-vous (ou l'une de ses fois, s'il revient) : « demain à 15 h », « samedi 18 octobre de 14 h à
  * 16 h », « du mardi 27 au jeudi 29 octobre », « mardi 14 octobre (toute la journée) ».
  */
-fun RendezVous.quandEnTexte(fois: LocalDateTime = quand, aujourdHui: LocalDate = LocalDate.now()): String {
+fun RendezVous.quandEnTexte(fois: LocalDateTime = quand, aujourdHui: LocalDate = LocalDate.now(), relatif: Boolean = true): String {
     val finFois = fin?.let { fois.plus(Duration.between(quand, it)) }
     if (surPlusieursJours(fois, finFois, journee, repetition != null) && finFois != null) {
         val a = fois.toLocalDate()
@@ -60,7 +60,7 @@ fun RendezVous.quandEnTexte(fois: LocalDateTime = quand, aujourdHui: LocalDate =
         val heureFin = if (finFois.toLocalTime() < LocalTime.of(23, 59)) " à ${finFois.toLocalTime().enTexte()}" else ""
         return "du ${a.enTexteLong(aujourdHui)} à ${fois.toLocalTime().enTexte()} au ${b.enTexteLong(aujourdHui)}$heureFin"
     }
-    val jour = fois.toLocalDate().enTexte(aujourdHui)
+    val jour = if (relatif) fois.toLocalDate().enTexte(aujourdHui) else fois.toLocalDate().enTexteLong(aujourdHui)
     if (journee) return if (sorte == Sorte.ANNIV) jour else "$jour (toute la journée)"
     if (finFois != null) return "$jour de ${fois.toLocalTime().enTexte()} à ${finFois.toLocalTime().enTexte()}"
     return "$jour à ${fois.toLocalTime().enTexte()}"

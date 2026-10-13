@@ -48,6 +48,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.jordanjacquot.evermind.EvermindApp
 import io.github.jordanjacquot.evermind.donnees.Sorte
+import io.github.jordanjacquot.evermind.ui.theme.BoutonAccent
+import io.github.jordanjacquot.evermind.ui.theme.Etiquette
+import io.github.jordanjacquot.evermind.ui.theme.Verre
+import io.github.jordanjacquot.evermind.ui.theme.dessin
+import io.github.jordanjacquot.evermind.ui.theme.ev
+import io.github.jordanjacquot.evermind.ui.theme.teinte
+import androidx.compose.foundation.layout.size
 import io.github.jordanjacquot.evermind.rappels.RappelsChoix
 import io.github.jordanjacquot.evermind.rappels.ReglagesRappels
 import io.github.jordanjacquot.evermind.rappels.rappelsDefaut
@@ -72,6 +79,8 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
     var choixFin by remember { mutableStateOf(false) }
 
     Scaffold(
+        containerColor = androidx.compose.ui.graphics.Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             TopAppBar(
                 title = { Text(if (id == null) "Nouveau rendez-vous" else "Modifier") },
@@ -79,7 +88,7 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
                 actions = {
                     TextButton(onClick = { vm.enregistrer(retour) }, enabled = b.peutEnregistrer) { Text("Enregistrer") }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
             )
         },
     ) { marges ->
@@ -90,8 +99,10 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
                 .padding(marges)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
         ) {
+          // Quoi, et de quelle sorte
+          Verre(modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = b.titre,
                 onValueChange = { t -> vm.changer { it.copy(titre = t) } },
@@ -101,16 +112,20 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Text("Sorte", style = MaterialTheme.typography.labelLarge)
+            Etiquette("Sorte", ev.discret, Modifier.padding(top = 12.dp, bottom = 4.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Sorte.entries.forEach { s ->
                     FilterChip(
                         selected = b.sorte == s,
                         onClick = { vm.changer { it.copy(sorte = s) } },
-                        label = { Text("${s.icone} ${s.nom}") },
+                        label = { Text(s.nom) },
+                        leadingIcon = { Icon(s.dessin, null, tint = s.teinte, modifier = Modifier.size(18.dp)) },
                     )
                 }
             }
+          }
+          // Quand
+          Verre(modifier = Modifier.fillMaxWidth()) {
 
             OutlinedButton(onClick = { choixJour = true }, modifier = Modifier.fillMaxWidth()) {
                 Text(majuscule(b.jour.enTexte()))
@@ -132,6 +147,9 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
                     Text("La fin doit être après le début.", color = MaterialTheme.colorScheme.error)
                 }
             }
+          }
+          // Les détails
+          Verre(modifier = Modifier.fillMaxWidth()) {
 
             Champ("Lieu", b.lieu) { t -> vm.changer { it.copy(lieu = t) } }
             Champ("Avec (séparés par des virgules)", b.avec) { t -> vm.changer { it.copy(avec = t) } }
@@ -146,7 +164,7 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
             // Les rappels : ceux par défaut (Réglages), ou ceux choisis pour ce rendez-vous
             val parDefaut = rappelsDefaut(b.sorte, b.journee, ReglagesRappels(contexte))
             val choisis = b.rappels ?: parDefaut
-            Text("Rappels", style = MaterialTheme.typography.labelLarge)
+            Etiquette("Je te préviens", ev.discret, Modifier.padding(top = 12.dp, bottom = 4.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = b.rappels == null,
@@ -167,11 +185,8 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
                 Text("Important", modifier = Modifier.weight(1f))
                 Switch(checked = b.important, onCheckedChange = { v -> vm.changer { it.copy(important = v) } })
             }
-            Button(
-                onClick = { vm.enregistrer(retour) },
-                enabled = b.peutEnregistrer,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            ) { Text("Enregistrer") }
+          }
+            BoutonAccent("Enregistrer", { vm.enregistrer(retour) }, Modifier.fillMaxWidth().padding(vertical = 8.dp), actif = b.peutEnregistrer)
         }
     }
 

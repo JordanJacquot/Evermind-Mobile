@@ -64,6 +64,7 @@ class AgendaViewModel(app: EvermindApp) : ViewModel() {
     /** Toucher le jour déjà choisi revient à « À venir ». */
     fun choisir(jour: LocalDate) = jourChoisi.update { if (it == jour) null else jour }
     fun aVenir() { jourChoisi.value = null }
+    fun aujourdHui() { mois.value = YearMonth.now(); jourChoisi.value = null }
 
     /** Crée le ou les rendez-vous d'une phrase, si elle dit tout ce qu'il faut. */
     fun ajouter(phrase: String): Ajout {

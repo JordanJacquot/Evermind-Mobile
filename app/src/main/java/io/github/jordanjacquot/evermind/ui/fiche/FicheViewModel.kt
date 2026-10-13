@@ -26,6 +26,15 @@ class FicheViewModel(private val depot: DepotRendezVous, private val id: String)
         viewModelScope.launch { depot.enregistrer(rdv.copy(fait = !rdv.fait)) }
     }
 
+    /** Une copie de ce rendez-vous (à modifier ensuite), comme « Dupliquer » sur PC. */
+    fun dupliquer(ensuite: () -> Unit) {
+        val rdv = rendezVous.value ?: return
+        viewModelScope.launch {
+            depot.enregistrer(rdv.copy(id = java.util.UUID.randomUUID().toString(), cree = java.time.LocalDateTime.now().withSecond(0).withNano(0)))
+            ensuite()
+        }
+    }
+
     fun supprimer(ensuite: () -> Unit) {
         viewModelScope.launch {
             depot.supprimer(id)
