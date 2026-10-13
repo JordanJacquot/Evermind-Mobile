@@ -54,6 +54,12 @@ android {
         compose = true
     }
 
+    // Les bibliothèques sont sorties de l'APK à l'installation : llama.cpp y cherche la variante du processeur
+    // la plus rapide pour ce téléphone (libggml-cpu-*.so)
+    packaging {
+        jniLibs { useLegacyPackaging = true }
+    }
+
     // Ce qui sert aux tests sur PC et sur le téléphone : la comparaison avec Evermind PC et ses phrases
     sourceSets {
         getByName("test") {

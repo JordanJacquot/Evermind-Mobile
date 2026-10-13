@@ -71,7 +71,11 @@ class ReponseIA(val actions: List<ActionIA>, val reponse: String) {
         /** Lit la réponse de l'IA, en tolérant ses petites fautes (un texte au lieu d'une liste...) ; null si illisible. */
         fun lire(texte: String?): ReponseIA? {
             if (texte.isNullOrBlank()) return null
-            val o = runCatching { json.parseToJsonElement(texte) as? JsonObject }.getOrNull() ?: return null
+            // (seulement l'objet JSON, même si le modèle a écrit quelque chose avant ou après)
+            val debut = texte.indexOf('{')
+            val fin = texte.lastIndexOf('}')
+            if (debut < 0 || fin <= debut) return null
+            val o = runCatching { json.parseToJsonElement(texte.substring(debut, fin + 1)) as? JsonObject }.getOrNull() ?: return null
             val actions = (o["actions"] as? JsonArray).orEmpty().mapNotNull { e ->
                 val a = e as? JsonObject ?: return@mapNotNull null
                 val action = a.texte("action") ?: return@mapNotNull null

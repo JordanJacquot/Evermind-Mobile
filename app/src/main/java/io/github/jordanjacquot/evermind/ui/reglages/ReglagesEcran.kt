@@ -65,6 +65,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.jordanjacquot.evermind.EvermindApp
+import io.github.jordanjacquot.evermind.assistant.ModeleAssistant
+import io.github.jordanjacquot.evermind.ui.theme.traduire
 import io.github.jordanjacquot.evermind.voix.EtatInstallation
 import io.github.jordanjacquot.evermind.voix.Modeles
 import io.github.jordanjacquot.evermind.voix.Pack
@@ -166,6 +168,8 @@ fun ReglagesEcran(retour: () -> Unit) {
                 }
             }
 
+            SectionAssistant()
+
             Section("« OK Evermind »", "Dis « OK Evermind » quand l'agenda est à l'écran, puis ta demande. Une petite écoute sur le téléphone ne reconnaît que ces mots-là ; tout le reste est oublié aussitôt, rien n'est enregistré.") {
                 if (!voixPrete) {
                     Text("Installe d'abord la voix.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -262,5 +266,72 @@ private fun Ligne(texte: String, oui: Boolean, changer: (Boolean) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(texte, modifier = Modifier.weight(1f))
         Switch(checked = oui, onCheckedChange = changer)
+    }
+}
+
+/**
+ * L'assistant : celui que la mémoire du téléphone permet (Evermind ne doit jamais prendre toute la mémoire), ou un plus
+ * léger au choix. Téléchargé une fois, comme la voix.
+ */
+@Composable
+private fun SectionAssistant() {
+    val app = LocalContext.current.applicationContext as EvermindApp
+    val cerveau = app.cerveau
+    val choisi by cerveau.choisi.collectAsStateWithLifecycle()
+    val actif by cerveau.actif.collectAsStateWithLifecycle()
+    val conseille = cerveau.conseille
+    val ram = "%.1f".format(cerveau.ramGo).replace('.', ',')
+    // Le modèle dont on parle : celui installé, sinon celui choisi dans la liste, sinon le conseillé
+    var vise by remember { mutableStateOf(choisi ?: conseille) }
+    val etats = ModeleAssistant.entries.associateWith { m -> app.voix.installation.etat(m.pack).collectAsStateWithLifecycle().value }
+    val moteurOk = remember { io.github.jordanjacquot.evermind.assistant.MoteurLlama.disponible(app) }
+
+    Section(
+        "L'assistant",
+        "Pour lui parler librement, comme sur PC : « décale le dentiste à jeudi », « supprime les raids de novembre », " +
+            "« qu'est-ce que j'ai demain ? ». Une IA qui tourne sur le téléphone, sans Internet.",
+    ) {
+        Text("Ce téléphone a $ram Go de mémoire.", style = MaterialTheme.typography.bodySmall, color = ev.discret)
+        when {
+            !moteurOk -> Text("Ce téléphone ne peut pas faire tourner l'assistant (processeur 32 bits). Evermind comprend quand même tes rendez-vous avec ses règles.",
+                style = MaterialTheme.typography.bodyMedium)
+            conseille == null -> Text("Il n'a pas assez de mémoire pour un assistant sans ralentir le reste. Evermind comprend quand même tes rendez-vous avec ses règles, la voix et les rappels marchent normalement.",
+                style = MaterialTheme.typography.bodyMedium)
+            else -> {
+                // Les assistants possibles : le conseillé, et les plus légers (jamais plus gros que ce que la mémoire permet)
+                ModeleAssistant.entries.filter { it.ramConseillee <= conseille.ramConseillee }.forEach { m ->
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { vise = m }) {
+                        RadioButton(selected = vise == m, onClick = { vise = m })
+                        Column(Modifier.weight(1f)) {
+                            Text(m.nom + (if (m == conseille) "  (conseillé)" else "") + "  ·  " + enMo(m.fichier.taille), fontWeight = FontWeight.Medium)
+                            Text(m.description, style = MaterialTheme.typography.bodySmall, color = ev.discret)
+                        }
+                    }
+                }
+                val m = vise ?: conseille
+                m.avertissement?.let { Text("⚠ $it", style = MaterialTheme.typography.bodySmall, color = ev.theme.traduire(0xFFFFD84D), modifier = Modifier.padding(vertical = 6.dp)) }
+                val installe = Modeles.installe(app, m.pack)
+                if (installe && choisi == m) {
+                    Text("✓ ${m.nom} est installé.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+                    Ligne("Utiliser l'assistant", actif) { cerveau.activer(it) }
+                } else if (installe) {
+                    BoutonAccent("Utiliser ${m.nom}", { cerveau.choisir(m) }, Modifier.padding(top = 4.dp))
+                } else {
+                    Installer(
+                        titre = "Installer l'assistant ${m.nom} (${enMo(m.fichier.taille)})",
+                        pret = false,
+                        pretTexte = null,
+                        etat = etats.getValue(m),
+                        lancer = {
+                            app.voix.installation.lancer(m.pack) {
+                                // Un seul assistant sur le téléphone : l'ancien laisse sa place
+                                ModeleAssistant.entries.filter { it != m }.forEach { autre -> Modeles.fichier(app, autre.fichier.vers).delete() }
+                                cerveau.choisir(m)
+                            }
+                        },
+                    )
+                }
+            }
+        }
     }
 }

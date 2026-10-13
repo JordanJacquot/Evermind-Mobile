@@ -137,6 +137,7 @@ Java_io_github_jordanjacquot_evermind_assistant_MoteurLlama_repondre(JNIEnv *env
     std::vector<llama_token> suite = common_tokenize(g_contexte, apres, prefixe.empty(), true);
     if (suite.empty()) return nullptr;
 
+    const int64_t t0 = ggml_time_us();
     auto memoire = llama_get_memory(g_contexte);
     bool deja = !prefixe.empty() && prefixe == g_prefixe;
     if (deja) {
@@ -164,6 +165,7 @@ Java_io_github_jordanjacquot_evermind_assistant_MoteurLlama_repondre(JNIEnv *env
     if (pos + (llama_pos) suite.size() + max_jetons > (llama_pos) llama_n_ctx(g_contexte)) { LOGE("trop long pour la mémoire"); return nullptr; }
     if (!lire(suite, pos, true)) { LOGE("lecture de la demande impossible"); return nullptr; }
     pos += (llama_pos) suite.size();
+    const int64_t t1 = ggml_time_us();
 
     // La réponse, contrainte par le schéma (comme response_format sur PC), sans hasard (température 0)
     common_params_sampling sp;
@@ -188,5 +190,9 @@ Java_io_github_jordanjacquot_evermind_assistant_MoteurLlama_repondre(JNIEnv *env
         if (llama_process(g_contexte, LLAMA_PROCESS_TYPE_DECODE, lot.get()) != 0) break;
     }
     common_sampler_free(echantillon);
+    // Le début de réponse que le modèle écrit lui-même (« <|im_start|>assistant ») ne fait pas partie du JSON
+    if (!params.generation_prompt.empty() && reponse.rfind(params.generation_prompt, 0) == 0) reponse = reponse.substr(params.generation_prompt.size());
+    LOGI("consignes %d jetons (%s), demande %d jetons, lu en %.1f s, réponse %d caractères en %.1f s",
+         (int) prefixe.size(), deja ? "déjà en mémoire" : "lues", (int) suite.size(), (t1 - t0) / 1e6, (int) reponse.size(), (ggml_time_us() - t1) / 1e6);
     return env->NewStringUTF(reponse.c_str());
 }

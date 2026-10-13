@@ -3,6 +3,8 @@ package io.github.jordanjacquot.evermind.ui.agenda
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.jordanjacquot.evermind.EvermindApp
+import io.github.jordanjacquot.evermind.assistant.Resultat
+import io.github.jordanjacquot.evermind.assistant.estCommande
 import io.github.jordanjacquot.evermind.comprendre.Manque
 import io.github.jordanjacquot.evermind.comprendre.lirePhrase
 import io.github.jordanjacquot.evermind.comprendre.versRendezVous
@@ -34,12 +36,18 @@ data class AgendaEtat(
 sealed interface Ajout {
     data class Fait(val rendezVous: List<RendezVous>) : Ajout
     data class Incomplet(val manque: Manque) : Ajout
+    /** L'assistant a répondu (et peut-être changé l'agenda). */
+    data class Repondu(val resultat: Resultat) : Ajout
 }
 
 class AgendaViewModel(app: EvermindApp) : ViewModel() {
     private val depot: DepotRendezVous = app.depot
+    private val cerveau = app.cerveau
+    private val _reflechit = MutableStateFlow(false)
+    /** L'assistant réfléchit à une demande. */
+    val reflechit: StateFlow<Boolean> = _reflechit
     /** Parler à Evermind (micro ou « OK Evermind »). */
-    val conversation = Conversation(app, app.voix, viewModelScope, ::ajouter)
+    val conversation = Conversation(app, app.voix, viewModelScope) { traiter(it, parLaVoix = true) }
     private val mois = MutableStateFlow(YearMonth.now())
     private val jourChoisi = MutableStateFlow<LocalDate?>(null)
 
@@ -75,6 +83,40 @@ class AgendaViewModel(app: EvermindApp) : ViewModel() {
         // Le calendrier montre le mois du (premier) rendez-vous ajouté
         mois.value = YearMonth.from(rdvs.first().quand)
         return Ajout.Fait(rdvs)
+    }
+
+    /** L'assistant est-il prêt à prendre cette phrase ? (tout ce qui est dit ; une commande écrite, « décale... ») */
+    fun pourAssistant(phrase: String, parLaVoix: Boolean) = cerveau.pret && (parLaVoix || estCommande(phrase))
+
+    /**
+     * Une phrase écrite ou dite : l'assistant s'en occupe s'il est là (comme sur PC), sinon les règles d'Evermind.
+     * S'il ne répond pas, les règles prennent le relais.
+     */
+    suspend fun traiter(phrase: String, parLaVoix: Boolean): Ajout {
+        if (pourAssistant(phrase, parLaVoix)) {
+            _reflechit.value = true
+            try {
+                val r = cerveau.assistant.demander(phrase, depot.liste())
+                if (r != null) {
+                    if (r.first.change) depot.remplacerTout(r.second)
+                    return Ajout.Repondu(r.first)
+                }
+                // Pas de réponse : une demande écrite le dit (comme sur PC) ; une phrase dite passe aux règles d'Evermind
+                if (!parLaVoix) {
+                    val t = "L'assistant n'a pas répondu. Réessaie dans un instant."
+                    return Ajout.Repondu(Resultat(t, t, null, false))
+                }
+            } finally {
+                _reflechit.value = false
+            }
+        }
+        return ajouter(phrase)
+    }
+
+    /** « Annuler » après une action de l'assistant : l'agenda revient comme avant. */
+    fun annulerAssistant() {
+        val avant = cerveau.assistant.annulerDerniere() ?: return
+        viewModelScope.launch { depot.remplacerTout(avant) }
     }
 
     fun annuler(rdvs: List<RendezVous>) {

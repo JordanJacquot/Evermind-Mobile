@@ -33,7 +33,7 @@ class Conversation(
     private val contexte: Context,
     private val voix: Voix,
     private val portee: CoroutineScope,
-    private val ajouter: (String) -> Ajout,
+    private val traiter: suspend (String) -> Ajout,
 ) {
     private val _etat = MutableStateFlow(EtatVoix.REPOS)
     val etat: StateFlow<EtatVoix> = _etat
@@ -62,10 +62,16 @@ class Conversation(
             val texte = voix.dicter(debut = {})
             if (texte == null) { voix.bip(false); return }
             _etat.value = EtatVoix.COMPREND
-            val r = ajouter(texte)
+            val r = traiter(texte)
             _dits.emit(Dit(texte, r))
             _etat.value = EtatVoix.REPOND
-            voix.dire(if (r is Ajout.Fait) Voix.noteAjoute(r.rendezVous) else Voix.manque((r as Ajout.Incomplet).manque))
+            voix.dire(
+                when (r) {
+                    is Ajout.Fait -> Voix.noteAjoute(r.rendezVous)
+                    is Ajout.Incomplet -> Voix.manque(r.manque)
+                    is Ajout.Repondu -> r.resultat.dit
+                },
+            )
         } finally {
             _etat.value = EtatVoix.REPOS
         }

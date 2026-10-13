@@ -27,6 +27,8 @@ Ouvrir le dossier dans Android Studio, attendre la synchronisation Gradle, puis 
 
 - `gradlew assembleDebug` : construit `app/build/outputs/apk/debug/app-debug.apk`.
 - `gradlew test` : les tests sur PC, dont la lecture des phrases comparée à Evermind PC (3 072 phrases).
+- Le catalogue de l'assistant du PC (125 demandes) avec l'IA du PC : `EVERMIND_LLAMA_SERVEUR` (llama-server.exe) et
+  `EVERMIND_LLAMA_MODELE` (.gguf), puis `gradlew testDebugUnitTest --tests *CatalogueAssistantTest*`.
 - `gradlew connectedDebugAndroidTest` : la même comparaison sur le téléphone ou l'émulateur branché
   (Android lit les expressions régulières autrement que la JVM).
 - `outils\exporter-phrases.ps1` : refait le fichier de référence de ces tests à partir du dépôt Evermind PC
@@ -55,7 +57,8 @@ Le code est dans `app/src/main/java/io/github/jordanjacquot/evermind/` :
 - `rappels/` : les rappels (comme sur PC), l'alarme Android qui les donne à l'heure, et leurs notifications.
 - `ui/agenda/Conversation.kt` : parler à Evermind (micro ou « OK Evermind ») ; `ui/reglages/` : les réglages.
 
-L'assistant (étape 5) aura son dossier `assistant/`.
+- `assistant/` : l'assistant (portage de `cerveau.ps1`) : consignes, contrôles, actions, choix du modèle selon la
+  mémoire (`Cerveau`) ; `app/src/main/cpp/` : le moteur llama.cpp compilé pour Android.
 
 ## État
 
@@ -77,5 +80,10 @@ L'assistant (étape 5) aura son dossier `assistant/`.
   19 heures. »), avec les 5 voix du PC. « Installer « OK Evermind » » (42 Mo) : dire « OK Evermind » quand l'agenda
   est à l'écran, puis sa demande. Sans la voix installée, le micro utilise la dictée hors ligne du téléphone.
   Pas encore : « OK Evermind, ajoute... » d'une seule traite (il faut attendre le bip), ni l'écoute en arrière-plan.
-- Pas encore : les horaires de travail en postes (« je suis du matin lundi et mardi ») et les demandes à l'assistant
-  (« décale le dentiste à jeudi »), qui viendront avec l'assistant (étape 5).
+- **L'assistant** (étape 5, en cours), comme sur PC : « décale le dentiste à jeudi », « supprime les raids de novembre »,
+  « je suis du matin lundi et mardi ». Une IA sur le téléphone (llama.cpp, comme sur PC), choisie selon sa mémoire pour
+  ne jamais le ralentir : Qwen3 4B, celui du PC, à partir de 12 Go (125 demandes sur 125) ; Qwen3.5 2B de 6 à 11 Go
+  (environ 9 sur 10) ; Qwen3.5 0.8B de 4 à 5 Go, avec un avertissement (environ 3 sur 4) ; rien en dessous (les règles
+  d'Evermind suffisent). Réglages, « Installer l'assistant ». Tout ce qui est dit lui va ; dans la barre, les demandes
+  (« décale », « supprime », questions). Evermind vérifie tout avant d'agir, et « Annuler » revient en arrière.
+  À venir : la première lecture des consignes plus rapide (gardée d'un lancement à l'autre).

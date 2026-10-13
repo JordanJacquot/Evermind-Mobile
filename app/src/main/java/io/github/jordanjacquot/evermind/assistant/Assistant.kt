@@ -41,6 +41,9 @@ class Assistant(
 
     fun oublier() { conversation.clear(); conversationQuand = null }
 
+    /** L'agenda d'avant la dernière action de l'assistant (« Annuler »), ou null s'il n'y a rien à annuler. */
+    fun annulerDerniere(): List<RendezVous>? = annulations.removeLastOrNull()
+
     /**
      * Une demande (« décale le dentiste à jeudi ») sur cet agenda. Rend ce qu'Evermind dit et le nouvel agenda ;
      * null si l'IA n'a pas répondu (les règles d'Evermind prennent alors le relais).

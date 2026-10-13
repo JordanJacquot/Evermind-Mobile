@@ -18,6 +18,11 @@ class DepotRendezVous(private val dao: RendezVousDao, private val apresChangemen
         apresChangement()
     }
 
+    suspend fun remplacerTout(liste: List<RendezVous>) {
+        dao.remplacerTout(liste)
+        apresChangement()
+    }
+
     suspend fun supprimer(id: String) {
         dao.supprimer(id)
         apresChangement()

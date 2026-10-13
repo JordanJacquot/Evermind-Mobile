@@ -108,6 +108,7 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
     val app = contexte.applicationContext as EvermindApp
     val vm = viewModel { AgendaViewModel(app) }
     val etatVoix by vm.conversation.etat.collectAsStateWithLifecycle()
+    val reflechit by vm.reflechit.collectAsStateWithLifecycle()
     val etat by vm.etat.collectAsStateWithLifecycle()
     val messages = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -141,6 +142,19 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
     fun montrer(r: Ajout) {
         when (r) {
             is Ajout.Incomplet -> manque = r.manque
+            is Ajout.Repondu -> {
+                // Ce que l'assistant a fait (ou répondu) ; une phrase à compléter revient dans la barre
+                val res = r.resultat
+                manque = null
+                if (res.aCorriger != null) { phrase = res.aCorriger; alerte = res.ecrit; return }
+                phrase = ""
+                focus.clearFocus()
+                scope.launch {
+                    messages.currentSnackbarData?.dismiss()
+                    val choix = messages.showSnackbar(res.ecrit, if (res.change) "Annuler" else null, duration = SnackbarDuration.Long)
+                    if (choix == SnackbarResult.ActionPerformed) vm.annulerAssistant()
+                }
+            }
             is Ajout.Fait -> {
                 phrase = ""
                 manque = null
@@ -157,8 +171,9 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
     }
 
     fun envoyer() {
-        if (phrase.isBlank()) return
-        montrer(vm.ajouter(phrase))
+        if (phrase.isBlank() || reflechit) return
+        val texte = phrase
+        scope.launch { montrer(vm.traiter(texte, parLaVoix = false)) }
     }
 
     // Ce qui a été dit à voix haute s'affiche comme si on l'avait écrit
@@ -214,7 +229,8 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
                     phrase = phrase,
                     manque = manque,
                     ecoute = ecoute || etatVoix == EtatVoix.ECOUTE || etatVoix == EtatVoix.COMPREND,
-                    invite = etatVoix.invite,
+                    invite = if (reflechit) "Je réfléchis..." else etatVoix.invite,
+                    pourAssistant = { vm.pourAssistant(it, false) },
                     alerte = alerte,
                     voixInstallee = app.voix.voixInstallee,
                     changer = { phrase = it; manque = null; alerte = null },
@@ -419,6 +435,7 @@ private fun Saisie(
     manque: Manque?,
     ecoute: Boolean,
     invite: String?,
+    pourAssistant: (String) -> Boolean,
     alerte: String?,
     voixInstallee: Boolean,
     changer: (String) -> Unit,
@@ -465,6 +482,8 @@ private fun Saisie(
                     BoutonPilule("Compléter à la main", completer, Modifier.padding(top = 8.dp))
                 }
             }
+            // Une demande (« décale le dentiste à jeudi ») : l'assistant s'en occupera
+            phrase.isNotBlank() && pourAssistant(phrase) -> Text("L'assistant s'en occupe : envoie ta demande.", color = c.p, style = petit, modifier = marge)
             // Ce qui sera créé
             rdvs.isNotEmpty() -> {
                 val rdv = rdvs.first()
