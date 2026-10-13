@@ -33,6 +33,7 @@ static common_chat_templates_ptr g_modeles_chat;
 static std::vector<llama_token> g_prefixe;     // les consignes déjà lues (au début de la mémoire)
 static std::vector<uint8_t> g_etat_prefixe;    // pour les modèles « hybrides » : l'état juste après les consignes
 static bool g_hybride = false;
+static std::string g_chemin_etat;              // où garder les consignes lues, d'un lancement à l'autre
 
 static void journal(ggml_log_level niveau, const char *texte, void *) {
     if (niveau >= GGML_LOG_LEVEL_WARN) __android_log_print(ANDROID_LOG_WARN, LOG_TAG, "%s", texte);
@@ -53,11 +54,15 @@ static void tout_liberer() {
     if (g_modele) { llama_model_free(g_modele); g_modele = nullptr; }
     g_prefixe.clear();
     g_etat_prefixe.clear();
+    g_chemin_etat.clear();
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_io_github_jordanjacquot_evermind_assistant_MoteurLlama_charger(JNIEnv *env, jobject, jstring jchemin, jint n_ctx, jint n_fils) {
+Java_io_github_jordanjacquot_evermind_assistant_MoteurLlama_charger(JNIEnv *env, jobject, jstring jchemin, jint n_ctx, jint n_fils, jstring jetat) {
     tout_liberer();
+    const char *ce = env->GetStringUTFChars(jetat, nullptr);
+    g_chemin_etat = ce;
+    env->ReleaseStringUTFChars(jetat, ce);
     const char *chemin = env->GetStringUTFChars(jchemin, nullptr);
     llama_model_params mp = llama_model_default_params();
     g_modele = llama_model_load_from_file(chemin, mp);
@@ -139,6 +144,25 @@ Java_io_github_jordanjacquot_evermind_assistant_MoteurLlama_repondre(JNIEnv *env
 
     const int64_t t0 = ggml_time_us();
     auto memoire = llama_get_memory(g_contexte);
+    // Les consignes lues lors d'un lancement précédent, gardées sur le disque
+    bool disque = false;
+    if (g_prefixe.empty() && !prefixe.empty() && !g_chemin_etat.empty()) {
+        std::vector<llama_token> lus(prefixe.size() + 64);
+        size_t n = 0;
+        llama_memory_clear(memoire, true);
+        if (llama_state_seq_load_file(g_contexte, g_chemin_etat.c_str(), 0, lus.data(), lus.size(), &n) > 0) {
+            lus.resize(n);
+            if (lus == prefixe) {
+                g_prefixe = prefixe;
+                disque = true;
+                if (g_hybride) {
+                    g_etat_prefixe.resize(llama_state_seq_get_size(g_contexte, 0));
+                    llama_state_seq_get_data(g_contexte, g_etat_prefixe.data(), g_etat_prefixe.size(), 0);
+                }
+            }
+        }
+        if (!disque) llama_memory_clear(memoire, true);
+    }
     bool deja = !prefixe.empty() && prefixe == g_prefixe;
     if (deja) {
         if (g_hybride) {
@@ -158,6 +182,9 @@ Java_io_github_jordanjacquot_evermind_assistant_MoteurLlama_repondre(JNIEnv *env
             if (g_hybride) {
                 g_etat_prefixe.resize(llama_state_seq_get_size(g_contexte, 0));
                 llama_state_seq_get_data(g_contexte, g_etat_prefixe.data(), g_etat_prefixe.size(), 0);
+            }
+            if (!g_chemin_etat.empty() && llama_state_seq_save_file(g_contexte, g_chemin_etat.c_str(), 0, prefixe.data(), prefixe.size()) == 0) {
+                LOGE("consignes non gardées sur le disque");
             }
         }
     }
@@ -193,6 +220,6 @@ Java_io_github_jordanjacquot_evermind_assistant_MoteurLlama_repondre(JNIEnv *env
     // Le début de réponse que le modèle écrit lui-même (« <|im_start|>assistant ») ne fait pas partie du JSON
     if (!params.generation_prompt.empty() && reponse.rfind(params.generation_prompt, 0) == 0) reponse = reponse.substr(params.generation_prompt.size());
     LOGI("consignes %d jetons (%s), demande %d jetons, lu en %.1f s, réponse %d caractères en %.1f s",
-         (int) prefixe.size(), deja ? "déjà en mémoire" : "lues", (int) suite.size(), (t1 - t0) / 1e6, (int) reponse.size(), (ggml_time_us() - t1) / 1e6);
+         (int) prefixe.size(), disque ? "reprises du disque" : deja ? "déjà en mémoire" : "lues", (int) suite.size(), (t1 - t0) / 1e6, (int) reponse.size(), (ggml_time_us() - t1) / 1e6);
     return env->NewStringUTF(reponse.c_str());
 }

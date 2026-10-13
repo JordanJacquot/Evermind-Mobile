@@ -32,6 +32,8 @@ class ActionIA(
 ) {
     /** Le rendez-vous visé, choisi par Evermind (suppression de toute une période). */
     var cible: RendezVous? = null
+    /** Compris par les règles d'Evermind (Ordres) : tout est déjà lu, la phrase n'est pas relue. */
+    var sure = false
     /** Des postes de travail (« je suis du matin lundi et mardi »), lus par Evermind. */
     var postes: List<Poste>? = null
 

@@ -31,10 +31,10 @@ enum class ModeleAssistant(
     val penalitePresence: Float,
     val avertissement: String? = null,
 ) {
-    GRAND(Pack.IA_GRAND, "Qwen3 4B", "Le même assistant que sur PC : il comprend tout (125 demandes sur 125).", 10.5, 0f),
-    MOYEN(Pack.IA_MOYEN, "Qwen3.5 2B", "Comprend presque tout (environ 9 demandes sur 10).", 5.2, 1.5f),
-    LEGER(Pack.IA_LEGER, "Qwen3.5 0.8B", "Assistant léger pour les petits téléphones (environ 3 demandes sur 4).", 3.3, 1.5f,
-        avertissement = "Il se trompe parfois : écoute bien ce qu'Evermind répond, et dis « annule » si ce n'est pas ce que tu voulais."),
+    GRAND(Pack.IA_GRAND, "Qwen3 4B", "Le même que sur PC : il comprend même les phrases les plus tordues.", 10.5, 0f),
+    MOYEN(Pack.IA_MOYEN, "Qwen3.5 2B", "Comprend presque toutes les phrases tordues.", 5.2, 1.5f),
+    LEGER(Pack.IA_LEGER, "Qwen3.5 0.8B", "Léger, pour les petits téléphones.", 3.3, 1.5f,
+        avertissement = "Il se trompe parfois sur les phrases qu'Evermind ne comprend pas seul : écoute bien sa réponse, et dis « annule » si ce n'est pas ce que tu voulais."),
     ;
 
     val fichier get() = Modeles.fichiers.first { it.pack == pack }
@@ -52,8 +52,9 @@ enum class ModeleAssistant(
 }
 
 /**
- * L'assistant du téléphone : le modèle choisi, chargé seulement quand on lui parle, et libéré après 10 minutes sans
- * question (comme sur PC), ou tout de suite si Android manque de mémoire.
+ * L'assistant du téléphone : les règles d'Evermind (toujours là, immédiates), et en plus, pour les phrases qu'elles ne
+ * reconnaissent pas, le modèle choisi, chargé seulement quand il sert et libéré après 10 minutes sans question (comme
+ * sur PC), ou tout de suite si Android manque de mémoire.
  */
 class Cerveau(private val contexte: Context, private val portee: CoroutineScope, rappelsParDefaut: (RendezVous) -> List<String>) {
     private val reglages = contexte.getSharedPreferences("assistant", Context.MODE_PRIVATE)
@@ -67,8 +68,8 @@ class Cerveau(private val contexte: Context, private val portee: CoroutineScope,
     private val _actif = MutableStateFlow(reglages.getBoolean("actif", true))
     val actif: StateFlow<Boolean> = _actif
 
-    fun choisir(m: ModeleAssistant?) { _choisi.value = m; reglages.edit().putString("modele", m?.name).apply(); liberer() }
-    fun activer(oui: Boolean) { _actif.value = oui; reglages.edit().putBoolean("actif", oui).apply(); if (!oui) liberer() }
+    fun choisir(m: ModeleAssistant?) { _choisi.value = m; reglages.edit().putString("modele", m?.name).apply(); liberer(); preparer() }
+    fun activer(oui: Boolean) { _actif.value = oui; reglages.edit().putBoolean("actif", oui).apply(); if (!oui) liberer() else preparer() }
 
     /** Prêt à répondre : installé, activé, et le téléphone sait le faire tourner. */
     val pret: Boolean
@@ -81,14 +82,19 @@ class Cerveau(private val contexte: Context, private val portee: CoroutineScope,
     private var charge: ModeleAssistant? = null
     private var veille: Job? = null
 
+    /** Les consignes déjà lues par ce modèle, gardées d'un lancement à l'autre. */
+    private fun etat(m: ModeleAssistant) = java.io.File(contexte.filesDir, "assistant/${m.name.lowercase()}.consignes")
+
     private val moteur = MoteurIA { messages, schema ->
         withContext(Dispatchers.Default) {
             verrou.withLock {
+                if (!pret) return@withLock null
                 val m = _choisi.value ?: return@withLock null
                 if (charge != m) {
                     MoteurLlama.liberer()
                     val fils = min(4, max(2, Runtime.getRuntime().availableProcessors() - 2))
-                    if (!MoteurLlama.charger(Modeles.fichier(contexte, m.fichier.vers).path, 6144, fils)) { charge = null; return@withLock null }
+                    etat(m).parentFile?.mkdirs()
+                    if (!MoteurLlama.charger(Modeles.fichier(contexte, m.fichier.vers).path, 6144, fils, etat(m).path)) { charge = null; return@withLock null }
                     charge = m
                 }
                 val r = MoteurLlama.repondre(messagesEnJson(messages), schema, 400, m.penalitePresence)
@@ -100,6 +106,24 @@ class Cerveau(private val contexte: Context, private val portee: CoroutineScope,
     }
 
     val assistant = Assistant(moteur, rappelsParDefaut)
+
+    /** L'IA va-t-elle servir ? (installée et activée) */
+    val avecIA: Boolean get() = pret
+
+    /**
+     * La première lecture des consignes est longue (plusieurs minutes sur un petit téléphone) : elle est faite une fois
+     * pour toutes en arrière-plan, juste après l'installation ou au lancement, et gardée sur le disque.
+     */
+    fun preparer() {
+        val m = _choisi.value ?: return
+        if (!pret || etat(m).exists()) return
+        portee.launch(Dispatchers.Default) {
+            val agenda = AgendaIA(emptyList(), java.time.LocalDateTime.now())
+            val ctx = Consignes.contexte(agenda)
+            moteur.repondre(listOf(MessageIA("system", ctx.systeme), MessageIA("user", "Bonjour")), SchemaIA)
+            android.util.Log.i("EvermindAssistant", "consignes préparées : ${etat(m).exists()}")
+        }
+    }
 
     /** Après 10 minutes sans question, la mémoire est rendue au téléphone. */
     private fun endormirPlusTard() {

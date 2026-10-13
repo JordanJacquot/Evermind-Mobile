@@ -27,7 +27,8 @@ object MoteurLlama {
     }
 
     private external fun initialiser(dossierLibs: String)
-    external fun charger(chemin: String, nCtx: Int, nFils: Int): Boolean
+    /** Charge le modèle ; les consignes une fois lues sont gardées dans le fichier « etat » (lues une seule fois). */
+    external fun charger(chemin: String, nCtx: Int, nFils: Int, etat: String): Boolean
     external fun liberer()
 
     /** La réponse JSON à la conversation (messages en JSON : [{"role", "content"}]), ou null. */

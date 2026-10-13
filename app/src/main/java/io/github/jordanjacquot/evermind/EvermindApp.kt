@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /** L'application : crée une seule fois ce que tous les écrans partagent. */
 class EvermindApp : Application() {
@@ -43,6 +44,8 @@ class EvermindApp : Application() {
         super.onCreate()
         Notifications.creerCanal(this)
         Planificateur.reprogrammer(this)
+        // Les consignes de l'IA lues une fois pour toutes (si elle est installée et pas encore prête), sans gêner le lancement
+        portee.launch { kotlinx.coroutines.delay(15_000); cerveau.preparer() }
         voix.prechauffer()
     }
 }

@@ -237,6 +237,154 @@ class CatalogueAssistantTest {
         cas("piège", "Crée un rappel : rendre les livres à la médiathèque avant samedi.") { rv("*livres*").isNotEmpty() },
     )
 
+    /**
+     * L'examen : d'autres façons de dire les mêmes choses, écrites avant de régler les règles d'Evermind et jamais
+     * utilisées pour les régler. Il dit si Evermind comprend vraiment, pas seulement les phrases du catalogue.
+     */
+    private val examen: List<Cas> get() = listOf(
+        // Supprimer
+        cas("supprimer", "Vire le foot de mon agenda.") { rv("Foot").isEmpty() && rv("Dentiste").isNotEmpty() },
+        cas("supprimer", "Tu peux enlever le dentiste ?") { rv("Dentiste").isEmpty() && rv("Foot").isNotEmpty() },
+        cas("supprimer", "Retire la soirée chez Max.") { rv("Soirée chez Max").isEmpty() },
+        cas("supprimer", "Efface mon rendez-vous chez le coiffeur s'il te plaît.") { rv("Coiffeur").isEmpty() },
+        cas("supprimer", "Supprime l'anniversaire de Léa.") { rv("Anniversaire de Léa").isEmpty() && rv("Foot").isNotEmpty() },
+        cas("supprimer", "J'ai plus besoin du rappel pour le loyer, supprime-le.") { rv("Payer le loyer").isEmpty() },
+        cas("supprimer", "Annule la soirée chez Max, elle n'a plus lieu.") { rv("Soirée chez Max").isEmpty() },
+        cas("supprimer", "Le foot est annulé cette semaine.") { rv("Foot").isEmpty() },
+        cas("supprimer", "Supprime le raid de la semaine prochaine.") { val r = rv("Raid avec les potes").firstOrNull(); r != null && (rep(r)?.sauf?.contains(lea.plusDays(7).toString()) == true) },
+        cas("supprimer", "Enlève tous les raids de décembre.") { (rep(rv("Raid avec les potes").firstOrNull())?.sauf?.count { it.contains("-12-") } ?: 0) >= 4 },
+        cas("supprimer", "Plus de raid après le mois prochain.") { rep(rv("Raid avec les potes").firstOrNull())?.jusqua != null },
+        cas("supprimer", "Supprime le rendez-vous de ${nomJour(foot)}.") { rv("Foot").isEmpty() && rv("Dentiste").isNotEmpty() },
+        cas("supprimer", "Efface le truc du ${dentiste.dayOfMonth}.") { rv("Dentiste").isEmpty() && rv("Foot").isNotEmpty() },
+        cas("supprimer", "Supprime.") { taille == 8 },
+        // Modifier : le moment
+        cas("modifier", "Mets le dentiste à 17 h.") { jour(rv("Dentiste").firstOrNull(), dentiste, "17:00") },
+        cas("modifier", "Bouge le foot à 21 h.") { jour(rv("Foot").firstOrNull(), foot, "21:00") },
+        cas("modifier", "Le foot c'est à 18 h 30 finalement.") { jour(rv("Foot").firstOrNull(), foot, "18:30") },
+        cas("modifier", "Déplace la soirée chez Max à dimanche.") { val r = rv("Soirée chez Max").firstOrNull(); r != null && r.quand.dayOfWeek == DayOfWeek.SUNDAY && r.quand.hour == 21 },
+        cas("modifier", "Repousse le dentiste à la semaine d'après.") { jour(rv("Dentiste").firstOrNull(), dentiste.plusDays(7), "15:00") },
+        cas("modifier", "Avance le dentiste d'une demi-heure.") { jour(rv("Dentiste").firstOrNull(), dentiste, "14:30") },
+        cas("modifier", "Recule le foot de deux heures.") { jour(rv("Foot").firstOrNull(), foot, "21:00") },
+        cas("modifier", "Le coiffeur, mets-le demain à 11 h.") { jour(rv("Coiffeur").firstOrNull(), auj.plusDays(1), "11:00") },
+        cas("modifier", "Change la date du foot : samedi à 15 h.") { jour(rv("Foot").firstOrNull(), prochain(SAM), "15:00") },
+        cas("modifier", "Le raid ce sera le jeudi désormais.") { rep(rv("Raid avec les potes").firstOrNull())?.jour == 4 },
+        cas("modifier", "Le loyer il faut le payer le 5 maintenant.") { rep(rv("Payer le loyer").firstOrNull())?.jour == 5 },
+        cas("modifier", "Le dentiste dure une heure.") { rv("Dentiste")[0].fin?.toLocalTime() == LocalTime.of(16, 0) },
+        // Modifier : les détails
+        cas("modifier", "Invite Lucas à la soirée chez Max.") { "Lucas" in rv("Soirée chez Max")[0].avec },
+        cas("modifier", "Rajoute Inès et Paul au foot.") { val a = rv("Foot")[0].avec; "Inès" in a && "Paul" in a },
+        cas("modifier", "Enlève Max de la soirée.") { val a = rv("Soirée chez Max")[0].avec; "Max" !in a && "Tom" in a },
+        cas("modifier", "Pour le foot, n'oublie pas les crampons.") { rv("Foot")[0].aPreparer.any { it.texte.contains("rampon") } },
+        cas("modifier", "Il faut que je prenne ma carte de mutuelle pour le dentiste.") { rv("Dentiste")[0].aPreparer.any { it.texte.contains("mutuelle", true) } },
+        cas("modifier", "Le dentiste c'est au 3 avenue Foch.") { rv("Dentiste")[0].lieu.contains("Foch") },
+        cas("modifier", "Note pour la soirée : apporter des chips.") { val r = rv("Soirée chez Max")[0]; r.notes.contains("chips") || r.aPreparer.any { it.texte.contains("chips", true) } },
+        cas("modifier", "Appelle le foot entraînement de foot.") { rv("*ntra*nement de foot").isNotEmpty() || rv("Foot").isNotEmpty() },
+        cas("modifier", "Change le nom du dentiste en contrôle dentaire.") { rv("Contr*le dentaire").isNotEmpty() },
+        cas("modifier", "Le dentiste c'est important.") { rv("Dentiste")[0].important },
+        cas("modifier", "Rappelle-moi une heure avant la soirée chez Max.") { rv("Soirée chez Max")[0].rappels?.contains("m60") == true },
+        cas("modifier", "Préviens-moi le matin même pour le foot.") { rv("Foot")[0].rappels?.contains("matin") == true },
+        cas("modifier", "Étends les vacances... non, mets le foot sur deux jours.") { rv("Foot")[0].fin?.toLocalDate()?.isAfter(foot) == true },
+        cas("modifier", "Le raid, une semaine sur deux.") { rep(rv("Raid avec les potes").firstOrNull())?.intervalle == 2 },
+        cas("modifier", "Le raid s'arrête fin décembre.") { rep(rv("Raid avec les potes").firstOrNull())?.jusqua?.endsWith("-12-31") == true },
+        // Fait, annuler
+        cas("fait", "C'est fait pour le loyer.") { rv("Payer le loyer")[0].fait },
+        cas("fait", "J'ai bien appelé maman.") { rv("Appeler maman")[0].fait },
+        cas("fait", "Le loyer est payé.") { rv("Payer le loyer")[0].fait },
+        cas("annuler", "Supprime le dentiste.", "Annule ce que tu viens de faire.") { rv("Dentiste").isNotEmpty() },
+        cas("annuler", "Décale le foot à 21 h.", "Non, reviens en arrière.") { jour(rv("Foot").firstOrNull(), foot, "19:00") },
+        cas("annuler", "Ajoute piscine demain à 8 h.", "Supprime-le.") { rv("*iscine*").isEmpty() },
+        // Questions : rien ne change, et la réponse dit la bonne chose
+        cas("question", "J'ai quoi demain ?") { taille == 8 && dit.contains(Regex("Léa|raid", RegexOption.IGNORE_CASE)) },
+        cas("question", "Qu'est-ce que j'ai cette semaine ?") { taille == 8 && dit.contains("dentiste", true) },
+        cas("question", "Quand est le foot ?") { taille == 8 && (dit.contains("${foot.dayOfMonth}") || dit.contains(nomJour(foot), true)) },
+        cas("question", "À quelle heure est le dentiste ?") { taille == 8 && dit.contains("15") },
+        cas("question", "Avec qui je vais à la soirée chez Max ?") { taille == 8 && dit.contains("Inès") },
+        cas("question", "C'est où le dentiste ?") { taille == 8 && dit.contains("Lilas", true) },
+        cas("question", "Quel est le code de la porte du dentiste ?") { taille == 8 && dit.contains("4521B") },
+        cas("question", "Quand est l'anniversaire de Léa ?") { taille == 8 && (dit.contains("${lea.dayOfMonth}") || dit.contains("demain", true)) },
+        cas("question", "Elle a quel âge Léa ?") { taille == 8 && dit.contains("24") },
+        cas("question", "J'ai quelque chose ${nomJour(soiree)} soir ?") { taille == 8 && dit.contains("Max", true) },
+        cas("question", "Combien de rendez-vous j'ai demain ?") { taille == 8 },
+        // Discussion
+        cas("discussion", "Bonjour Evermind !") { taille == 8 },
+        cas("discussion", "Tu sers à quoi ?") { taille == 8 },
+        cas("discussion", "Rien, laisse tomber.") { taille == 8 },
+        // Doubles
+        cas("double", "Supprime le coiffeur et mets le dentiste à 16 h.") { rv("Coiffeur").isEmpty() && jour(rv("Dentiste").firstOrNull(), dentiste, "16:00") },
+        cas("double", "Ajoute Paul au foot et mets-le à 20 h.") { val r = rv("Foot").firstOrNull(); jour(r, foot, "20:00") && "Paul" in r!!.avec },
+        cas("double", "Décale le dentiste à 16 h et préviens-moi la veille.") { val r = rv("Dentiste").firstOrNull(); jour(r, dentiste, "16:00") && r!!.rappels?.contains("veille") == true },
+        // Créations qui ressemblent à des demandes
+        cas("créer", "Ajoute un foot samedi à 11 h avec Tom.") { rv("Foot").size == 2 },
+        cas("créer", "Mets-moi dentiste le 20 novembre à 9 h.") { rv("Dentiste").size == 2 },
+        cas("créer", "Programme un appel avec le garage lundi à 9 h.") { rv("*ppel*").any { jour(it, prochain(LUN), "09:00") } },
+        cas("créer", "N'oublie pas que je dois rendre les clés vendredi.") { rv("*cl*s*").isNotEmpty() },
+        cas("créer", "Rajoute une soirée jeux chez Tom samedi à 20 h.") { rv("*jeux*").isNotEmpty() && rv("Soirée chez Max").isNotEmpty() },
+    )
+
+    /** Le contre-examen : écrit après les règles, mesuré avant toute retouche (une vérification de plus). */
+    private val contreExamen: List<Cas> get() = listOf(
+        cas("supprimer", "Bon ben supprime le coiffeur.") { rv("Coiffeur").isEmpty() && taille == 7 },
+        cas("supprimer", "Je n'irai pas au dentiste, tu peux l'enlever.") { rv("Dentiste").isEmpty() && taille == 7 },
+        cas("supprimer", "Dégage le foot.") { rv("Foot").isEmpty() },
+        cas("supprimer", "Efface la soirée.") { rv("Soirée chez Max").isEmpty() && taille == 7 },
+        cas("supprimer", "Supprime le raid de mercredi prochain.") { val r = rv("Raid avec les potes"); r.size == 1 },
+        cas("supprimer", "Supprime les raids jusqu'à la fin de l'année.") { val r = rv("Raid avec les potes"); r.isEmpty() || rep(r[0])?.sauf != null || r[0].quand.year > auj.year },
+        cas("supprimer", "On annule le foot.") { rv("Foot").isEmpty() && taille == 7 },
+        cas("supprimer", "Le foot n'aura pas lieu.") { rv("Foot").isEmpty() },
+        cas("supprimer", "Retire Inès de la soirée chez Max.") { val a = rv("Soirée chez Max")[0].avec; "Inès" !in a && a.size == 2 },
+        cas("supprimer", "Supprime le rendez-vous de demain.") { taille in 7..8 && rv("Foot").isNotEmpty() && rv("Dentiste").isNotEmpty() },
+        cas("modifier", "Décale le foot à vendredi.") { jour(rv("Foot").firstOrNull(), prochain(VEN), "19:00") },
+        cas("modifier", "Le dentiste c'est à 14 h maintenant.") { jour(rv("Dentiste").firstOrNull(), dentiste, "14:00") },
+        cas("modifier", "Repousse le foot d'un jour.") { jour(rv("Foot").firstOrNull(), foot.plusDays(1), "19:00") },
+        cas("modifier", "Avance la soirée chez Max d'une heure.") { jour(rv("Soirée chez Max").firstOrNull(), soiree, "20:00") },
+        cas("modifier", "Reporte le dentiste au ${dentiste.plusDays(10).dayOfMonth} ${nomMois(dentiste.plusDays(10))}.") { jour(rv("Dentiste").firstOrNull(), dentiste.plusDays(10), "15:00") },
+        cas("modifier", "La soirée chez Max commence à 20 h 30.") { jour(rv("Soirée chez Max").firstOrNull(), soiree, "20:30") },
+        cas("modifier", "Mets le raid à 21 h.") { val r = rv("Raid avec les potes")[0]; r.quand.hour == 21 && r.quand.minute == 0 && rep(r)?.type == "semaine" },
+        cas("modifier", "Ajoute Sophie à la soirée.") { "Sophie" in rv("Soirée chez Max")[0].avec },
+        cas("modifier", "Tom vient aussi au foot.") { "Tom" in rv("Foot")[0].avec || taille == 8 },
+        cas("modifier", "Pour la soirée chez Max, je dois prendre le gâteau.") { rv("Soirée chez Max")[0].aPreparer.any { it.texte.contains("gâteau", true) } },
+        cas("modifier", "La soirée c'est chez Max au 5 rue Victor Hugo.") { rv("Soirée chez Max")[0].lieu.contains("Victor Hugo") },
+        cas("modifier", "Mets le foot en priorité.") { rv("Foot")[0].important || taille == 8 },
+        cas("modifier", "Rappelle-moi deux jours avant l'anniversaire de Léa.") { rv("Anniversaire de Léa")[0].rappels?.any { it.startsWith("m") || it.contains("j") } == true || rv("Anniversaire de Léa")[0].rappels != null },
+        cas("modifier", "Renomme la soirée chez Max en anniversaire de Max.") { rv("*nniversaire de Max").isNotEmpty() },
+        cas("modifier", "Le foot dure deux heures.") { rv("Foot")[0].fin?.toLocalTime() == LocalTime.of(21, 0) },
+        cas("modifier", "Le loyer c'est le 1er du mois désormais.") { rep(rv("Payer le loyer").firstOrNull())?.jour == 1 },
+        cas("modifier", "Le raid passe à 22 h.") { val r = rv("Raid avec les potes")[0]; r.quand.hour == 22 && rep(r)?.type == "semaine" },
+        cas("modifier", "Déplace le dentiste au même jour la semaine prochaine.") { jour(rv("Dentiste").firstOrNull(), dentiste.plusDays(7), "15:00") || taille == 8 },
+        cas("fait", "J'ai appelé maman.") { rv("Appeler maman")[0].fait },
+        cas("fait", "Loyer payé.") { rv("Payer le loyer")[0].fait || taille == 8 },
+        cas("fait", "Marque le loyer comme fait.") { rv("Payer le loyer")[0].fait },
+        cas("annuler", "Supprime le foot.", "Annule ça.") { rv("Foot").isNotEmpty() },
+        cas("annuler", "Mets le dentiste à 17 h.", "Annule.") { jour(rv("Dentiste").firstOrNull(), dentiste, "15:00") },
+        cas("annuler", "Ajoute badminton jeudi à 18 h.", "Efface-le.") { rv("*adminton*").isEmpty() },
+        cas("annuler", "Ajoute badminton jeudi à 18 h.", "Mets-le à 19 h.") { jour(rv("*adminton*").firstOrNull(), prochain(JEU), "19:00") },
+        cas("question", "Qu'est-ce que j'ai aujourd'hui ?") { taille == 8 && dit.contains("maman", true) },
+        cas("question", "C'est quand le raid ?") { taille == 8 && dit.contains(Regex("mercredi|jeudi|lundi|mardi|vendredi|samedi|dimanche|demain")) },
+        cas("question", "Le foot c'est à quelle heure ?") { taille == 8 && dit.contains("19") },
+        cas("question", "Qui vient à la soirée chez Max ?") { taille == 8 && dit.contains("Tom") },
+        cas("question", "Où se passe le dentiste ?") { taille == 8 && dit.contains("Lilas") },
+        cas("question", "J'ai prévu quoi ce week-end ?") { taille == 8 },
+        cas("question", "Est-ce que j'ai quelque chose ${nomJour(dentiste)} ?") { taille == 8 && dit.contains("Dentiste", true) },
+        cas("question", "Quelle idée de cadeau pour Léa ?") { taille == 8 && dit.contains("Zelda") },
+        cas("question", "Je dois apporter quoi au dentiste ?") { taille == 8 && dit.contains("Vitale", true) },
+        cas("question", "Combien de raids j'ai en novembre ?") { taille == 8 },
+        cas("discussion", "Coucou !") { taille == 8 },
+        cas("discussion", "Ok merci.") { taille == 8 },
+        cas("discussion", "Non rien.") { taille == 8 },
+        cas("double", "Annule le foot et mets un tennis à la place samedi à 10 h.") { rv("Foot").isEmpty() && rv("*ennis*").isNotEmpty() },
+        cas("double", "Décale le foot à 20 h, et rappelle-moi une heure avant.") { val r = rv("Foot")[0]; jour(r, foot, "20:00") && r.rappels?.contains("m60") == true },
+        cas("double", "Supprime la soirée chez Max puis ajoute un ciné samedi à 21 h.") { rv("Soirée chez Max").isEmpty() && rv("Cin*").isNotEmpty() },
+        cas("créer", "Ajoute foot dimanche à 10 h.") { rv("Foot").size == 2 },
+        cas("créer", "Crée un rendez-vous chez le dentiste pour mon fils lundi à 17 h.") { rv("*entiste*").size == 2 },
+        cas("créer", "Mets un rappel pour payer la cantine vendredi.") { rv("*cantine*").isNotEmpty() },
+        cas("créer", "J'ai une soirée chez Julie samedi à 20 h.") { rv("*Julie*").isNotEmpty() && rv("Soirée chez Max").isNotEmpty() },
+        cas("créer", "Dîner chez les parents dimanche midi.") { rv("D*ner*").isNotEmpty() },
+        cas("créer", "Rajoute un raid jeudi à 21 h.") { rv("*aid*").size == 2 },
+        cas("créer", "Je dois appeler la banque demain matin.") { rv("*banque*").isNotEmpty() },
+        cas("créer", "Rendez-vous chez l'ostéo le ${dentiste.plusDays(5).dayOfMonth} à 9 h.") { rv("*st*o*").any { it.quand.dayOfMonth == dentiste.plusDays(5).dayOfMonth } },
+        cas("créer", "Pense à sortir les poubelles ce soir à 21 h.") { rv("*poubelle*").isNotEmpty() },
+    )
+
     /** L'IA d'Evermind PC (llama-server), lancée pour le test. */
     private class Serveur(exe: String, modele: String, options: String) : AutoCloseable {
         val port = 8097
@@ -287,14 +435,20 @@ class CatalogueAssistantTest {
     @Test fun catalogue() {
         val exe = System.getenv("EVERMIND_LLAMA_SERVEUR")
         val modele = System.getenv("EVERMIND_LLAMA_MODELE")
-        assumeTrue("pas d'IA pour ce test (EVERMIND_LLAMA_SERVEUR, EVERMIND_LLAMA_MODELE)", exe != null && modele != null)
+        // EVERMIND_SANS_IA : Evermind seul, avec une IA qui ne répond jamais rien (ce que savent faire ses règles)
+        val sansIA = System.getenv("EVERMIND_SANS_IA") != null
+        assumeTrue("pas d'IA pour ce test (EVERMIND_LLAMA_SERVEUR, EVERMIND_LLAMA_MODELE, ou EVERMIND_SANS_IA)", sansIA || (exe != null && modele != null))
         val filtre = System.getenv("EVERMIND_FILTRE")
         val parFamille = linkedMapOf<String, IntArray>()
         val echecs = mutableListOf<String>()
         val debut = System.currentTimeMillis()
-        Serveur(exe!!, modele!!, System.getenv("EVERMIND_LLAMA_OPTIONS") ?: "").use { s ->
-            for (c in catalogue.filter { filtre == null || it.famille == filtre }) {
-                val assistant = Assistant(s.moteur, ::rappelsPc)
+        val serveur = if (sansIA) null else Serveur(exe!!, modele!!, System.getenv("EVERMIND_LLAMA_OPTIONS") ?: "")
+        val moteur = serveur?.moteur ?: MoteurIA { _, _ -> """{"actions":[],"reponse":""}""" }
+        try {
+            // EVERMIND_CATALOGUE=examen (ou contre-examen) : d'autres phrases au lieu de celles du PC
+            val liste = when (System.getenv("EVERMIND_CATALOGUE")) { "examen" -> examen; "contre-examen" -> contreExamen; else -> catalogue }
+            for (c in liste.filter { filtre == null || it.famille == filtre }) {
+                val assistant = Assistant(moteur, ::rappelsPc)
                 var agenda = exemple()
                 var dit = ""
                 val traces = mutableListOf<String>()
@@ -309,6 +463,8 @@ class CatalogueAssistantTest {
                 parFamille.getOrPut(c.famille) { IntArray(2) }.let { it[1]++; if (bon) it[0]++ }
                 if (!bon) echecs += "ÉCHEC [${c.famille}] ${c.phrases.joinToString(" / ")}\n    " + traces.joinToString("\n    ")
             }
+        } finally {
+            serveur?.close()
         }
         echecs.forEach { println(it) }
         parFamille.forEach { (f, n) -> println("%-18s %3d / %d".format(f, n[0], n[1])) }

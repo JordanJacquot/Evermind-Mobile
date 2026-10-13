@@ -23,11 +23,12 @@ fun messagesEnJson(messages: List<MessageIA>): String =
     JsonArray(messages.map { buildJsonObject { put("role", JsonPrimitive(it.role)); put("content", JsonPrimitive(it.contenu)) } }).toString()
 
 /**
- * L'assistant d'Evermind, comme sur PC (cerveau.ps1) : l'IA comprend ce qu'on lui dit librement et propose ce
- * qu'Evermind doit faire ; Evermind vérifie tout avant d'agir et garde de quoi revenir en arrière.
+ * L'assistant d'Evermind : ses règles (Ordres) comprennent tout de suite les demandes courantes ; pour le reste, l'IA
+ * (comme sur PC, cerveau.ps1) propose ce qu'Evermind doit faire. Evermind vérifie tout avant d'agir et garde de quoi
+ * revenir en arrière. Sans IA (petits téléphones), les règles suffisent.
  */
 class Assistant(
-    private val moteur: MoteurIA,
+    private val moteur: MoteurIA?,
     private val rappelsParDefaut: (RendezVous) -> List<String>,
     private val horaires: () -> Map<String, String> = { HorairesDefaut },
 ) {
@@ -35,21 +36,30 @@ class Assistant(
     private val conversation = mutableListOf<MessageIA>()
     private var conversationQuand: LocalDateTime? = null
     private val annulations = mutableListOf<List<RendezVous>>()
+    private val memoire = MemoireOrdres()
 
     private fun conversationRecente(maintenant: LocalDateTime) =
         conversation.isNotEmpty() && conversationQuand?.let { Duration.between(it, maintenant).toMinutes() < 3 } == true
 
-    fun oublier() { conversation.clear(); conversationQuand = null }
+    fun oublier() { conversation.clear(); conversationQuand = null; memoire.oublier() }
 
     /** L'agenda d'avant la dernière action de l'assistant (« Annuler »), ou null s'il n'y a rien à annuler. */
     fun annulerDerniere(): List<RendezVous>? = annulations.removeLastOrNull()
 
     /**
      * Une demande (« décale le dentiste à jeudi ») sur cet agenda. Rend ce qu'Evermind dit et le nouvel agenda ;
-     * null si l'IA n'a pas répondu (les règles d'Evermind prennent alors le relais).
+     * null si ni les règles ni l'IA n'ont compris.
      */
     suspend fun demander(texte: String, rendezVous: List<RendezVous>, maintenant: LocalDateTime = LocalDateTime.now()): Pair<Resultat, List<RendezVous>>? {
         val agenda = AgendaIA(rendezVous, maintenant)
+        // D'abord les règles d'Evermind : immédiat, et toujours la même chose pour la même phrase
+        val compris = Ordres(agenda, memoire, horaires()).comprendre(texte)
+        if (compris != null) {
+            val res = Actions(agenda, rappelsParDefaut, annulations).appliquer(compris, emptyMap(), texte)
+            retenir(rendezVous, agenda, compris, maintenant)
+            return res to agenda.liste.toList()
+        }
+        val moteur = moteur ?: return null
         val ctx = Consignes.contexte(agenda)
         if (!conversationRecente(maintenant)) conversation.clear()
         val messages = listOf(MessageIA("system", ctx.systeme)) + conversation.takeLast(6) + MessageIA("user", texte)
@@ -72,7 +82,17 @@ class Assistant(
         conversation += MessageIA("assistant", reponse.versJson())
         conversationQuand = maintenant
         val res = Actions(agenda, rappelsParDefaut, annulations).appliquer(reponse, ctx.codes, texte)
+        retenir(rendezVous, agenda, reponse, maintenant)
         return res to agenda.liste.toList()
+    }
+
+    /** Le rendez-vous dont on vient de parler (créé, ou touché), pour « supprime-le » juste après. */
+    private fun retenir(avant: List<RendezVous>, agenda: AgendaIA, rep: ReponseIA, maintenant: LocalDateTime) {
+        val ids = avant.map { it.id }.toSet()
+        val nouveau = agenda.liste.firstOrNull { it.id !in ids }
+        val touche = rep.actions.lastOrNull { it.cible != null && agenda.get(it.cible!!.id) != null }?.cible
+        (nouveau ?: touche)?.let { memoire.dernier = it.id }
+        memoire.quand = maintenant
     }
 
     /**

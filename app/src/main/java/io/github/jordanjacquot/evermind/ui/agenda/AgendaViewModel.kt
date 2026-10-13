@@ -85,30 +85,28 @@ class AgendaViewModel(app: EvermindApp) : ViewModel() {
         return Ajout.Fait(rdvs)
     }
 
-    /** L'assistant est-il prêt à prendre cette phrase ? (tout ce qui est dit ; une commande écrite, « décale... ») */
-    fun pourAssistant(phrase: String, parLaVoix: Boolean) = cerveau.pret && (parLaVoix || estCommande(phrase))
+    /** Une demande à l'assistant (« décale... », une question), pas un rendez-vous à noter ? */
+    fun pourAssistant(phrase: String, parLaVoix: Boolean) = parLaVoix || estCommande(phrase)
 
     /**
-     * Une phrase écrite ou dite : l'assistant s'en occupe s'il est là (comme sur PC), sinon les règles d'Evermind.
-     * S'il ne répond pas, les règles prennent le relais.
+     * Une phrase écrite ou dite : les règles d'Evermind la comprennent presque toujours tout de suite ; sinon l'IA, si
+     * elle est installée. Une phrase qu'aucun des deux ne comprend : une demande, Evermind le dit ; sinon c'est un
+     * rendez-vous à compléter, comme dans la barre.
      */
     suspend fun traiter(phrase: String, parLaVoix: Boolean): Ajout {
-        if (pourAssistant(phrase, parLaVoix)) {
-            _reflechit.value = true
-            try {
-                val r = cerveau.assistant.demander(phrase, depot.liste())
-                if (r != null) {
-                    if (r.first.change) depot.remplacerTout(r.second)
-                    return Ajout.Repondu(r.first)
-                }
-                // Pas de réponse : une demande écrite le dit (comme sur PC) ; une phrase dite passe aux règles d'Evermind
-                if (!parLaVoix) {
-                    val t = "L'assistant n'a pas répondu. Réessaie dans un instant."
-                    return Ajout.Repondu(Resultat(t, t, null, false))
-                }
-            } finally {
-                _reflechit.value = false
+        _reflechit.value = cerveau.avecIA
+        try {
+            val r = cerveau.assistant.demander(phrase, depot.liste())
+            if (r != null) {
+                if (r.first.change) depot.remplacerTout(r.second)
+                return Ajout.Repondu(r.first)
             }
+        } finally {
+            _reflechit.value = false
+        }
+        if (estCommande(phrase)) {
+            val t = "Je n'ai pas compris. Tu peux le dire autrement ? Par exemple « décale le foot à 20 h »."
+            return Ajout.Repondu(Resultat(t, t, null, false))
         }
         return ajouter(phrase)
     }

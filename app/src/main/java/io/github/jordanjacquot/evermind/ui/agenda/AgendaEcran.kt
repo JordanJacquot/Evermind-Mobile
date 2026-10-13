@@ -483,7 +483,7 @@ private fun Saisie(
                 }
             }
             // Une demande (« décale le dentiste à jeudi ») : l'assistant s'en occupera
-            phrase.isNotBlank() && pourAssistant(phrase) -> Text("L'assistant s'en occupe : envoie ta demande.", color = c.p, style = petit, modifier = marge)
+            phrase.isNotBlank() && pourAssistant(phrase) -> Text("Evermind s'en occupe : envoie ta demande.", color = c.p, style = petit, modifier = marge)
             // Ce qui sera créé
             rdvs.isNotEmpty() -> {
                 val rdv = rdvs.first()

@@ -76,12 +76,12 @@ class Actions(
         val modifies = actions.filter { it.action == "modifier" }.mapNotNull { it.code() }
         if (modifies.isNotEmpty()) actions = actions.filter { !(it.action == "supprimer" && it.code() in modifies) }
         // « supprime mes rendez-vous de la semaine prochaine » : Evermind trouve lui-même tout ce qui tombe dans la période
-        suppressionsPeriode(texte, agenda)?.let { actions = it }
+        if (actions.none { it.sure }) suppressionsPeriode(texte, agenda)?.let { actions = it }
         val change = actions.any { it.action != "annuler" }
         if (change) sauverAnnulation()
         val inn = intentions(texte)
         for (a in actions) {
-            var rv: RendezVous? = a.cible ?: a.code()?.let { codes[it] }?.let { agenda.get(it) }
+            var rv: RendezVous? = a.cible?.let { agenda.get(it.id) } ?: a.code()?.let { codes[it] }?.let { agenda.get(it) }
             // « crée la réunion et ajoute Paul » : une modification qui accompagne une création vise le nouvel événement
             val surCree = cree != null && a.cible == null &&
                 ((a.action in listOf("modifier", "ouvrir") && rv == null) || (a.action == "modifier" && a.phrase == null && !inn.modif && !inn.supp))
@@ -116,7 +116,7 @@ class Actions(
                     dits += "Sur le téléphone, je ne peux pas ouvrir de dossiers."; ecrits += "Pas de dossiers à ouvrir sur le téléphone."
                 }
                 rv == null -> { dits += "Je n'ai pas trouvé de quel rendez-vous tu parles."; ecrits += "Rendez-vous introuvable." }
-                a.action == "supprimer" && modifsTexte(texte, rv, agenda).retirer.isNotEmpty() -> {
+                a.action == "supprimer" && !a.sure && modifsTexte(texte, rv, agenda).retirer.isNotEmpty() -> {
                     val gens = modifsTexte(texte, rv, agenda).retirer
                     modifier(rv, ActionIA("modifier", retirerPersonnes = gens))
                     dits += "J'ai retiré ${gens.joinToString(" et ")} de $nom."; ecrits += "Retiré de $nom : ${gens.joinToString(", ")}."
@@ -136,11 +136,11 @@ class Actions(
                 }
                 a.action == "modifier" -> {
                     // « même heure » : seule la date change, quelle que soit l'heure que l'IA a cru lire
-                    if (a.phrase != null && texte.contient("\\bm[êe]me (heure|horaire)")) {
+                    if (a.phrase != null && !a.sure && texte.contient("\\bm[êe]me (heure|horaire)")) {
                         a.phrase = a.phrase!!.remplace("\\s*(?:(?:de|à|a)\\s+)?\\d{1,2}\\s*h(?:\\s*\\d{2})?(?:\\s*(?:à|a|-)\\s*\\d{1,2}\\s*h(?:\\s*\\d{2})?)?", "").trim()
                     }
                     // Ce qu'Evermind lit lui-même dans la phrase, plus sûr que l'IA pour ces cas-là
-                    val lu = if (surCree) Modifs() else modifsTexte(texte, rv, agenda)
+                    val lu = if (surCree || a.sure) Modifs() else modifsTexte(texte, rv, agenda)
                     val arret = lu.arret
                     if (arret != null) {
                         // « le raid, c'est fini après novembre » : la série s'arrête (les fois d'après sont enlevées)

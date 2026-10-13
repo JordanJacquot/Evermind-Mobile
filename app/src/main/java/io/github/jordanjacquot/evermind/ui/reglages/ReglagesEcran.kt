@@ -288,14 +288,15 @@ private fun SectionAssistant() {
 
     Section(
         "L'assistant",
-        "Pour lui parler librement, comme sur PC : « décale le dentiste à jeudi », « supprime les raids de novembre », " +
-            "« qu'est-ce que j'ai demain ? ». Une IA qui tourne sur le téléphone, sans Internet.",
+        "Parle-lui librement : « décale le dentiste à jeudi », « supprime les raids de novembre », « qu'est-ce que j'ai " +
+            "demain ? ». Evermind comprend seul ces demandes, tout de suite et sur tous les téléphones. En plus, une IA sur " +
+            "le téléphone (sans Internet) peut s'occuper des phrases qu'il ne reconnaît pas.",
     ) {
         Text("Ce téléphone a $ram Go de mémoire.", style = MaterialTheme.typography.bodySmall, color = ev.discret)
         when {
-            !moteurOk -> Text("Ce téléphone ne peut pas faire tourner l'assistant (processeur 32 bits). Evermind comprend quand même tes rendez-vous avec ses règles.",
+            !moteurOk -> Text("Ce téléphone ne peut pas faire tourner l'IA (processeur 32 bits). Evermind comprend quand même tes demandes avec ses règles.",
                 style = MaterialTheme.typography.bodyMedium)
-            conseille == null -> Text("Il n'a pas assez de mémoire pour un assistant sans ralentir le reste. Evermind comprend quand même tes rendez-vous avec ses règles, la voix et les rappels marchent normalement.",
+            conseille == null -> Text("Il n'a pas assez de mémoire pour une IA sans ralentir le reste. Evermind comprend quand même tes demandes avec ses règles, la voix et les rappels marchent normalement.",
                 style = MaterialTheme.typography.bodyMedium)
             else -> {
                 // Les assistants possibles : le conseillé, et les plus légers (jamais plus gros que ce que la mémoire permet)
@@ -313,12 +314,12 @@ private fun SectionAssistant() {
                 val installe = Modeles.installe(app, m.pack)
                 if (installe && choisi == m) {
                     Text("✓ ${m.nom} est installé.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
-                    Ligne("Utiliser l'assistant", actif) { cerveau.activer(it) }
+                    Ligne("Utiliser l'IA pour les phrases inhabituelles", actif) { cerveau.activer(it) }
                 } else if (installe) {
                     BoutonAccent("Utiliser ${m.nom}", { cerveau.choisir(m) }, Modifier.padding(top = 4.dp))
                 } else {
                     Installer(
-                        titre = "Installer l'assistant ${m.nom} (${enMo(m.fichier.taille)})",
+                        titre = "Installer l'IA ${m.nom} (${enMo(m.fichier.taille)})",
                         pret = false,
                         pretTexte = null,
                         etat = etats.getValue(m),
