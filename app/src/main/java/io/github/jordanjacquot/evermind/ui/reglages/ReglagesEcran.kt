@@ -1,5 +1,10 @@
 package io.github.jordanjacquot.evermind.ui.reglages
 
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -84,7 +89,7 @@ import io.github.jordanjacquot.evermind.voix.VoixKokoro
 import io.github.jordanjacquot.evermind.voix.enMo
 import kotlinx.coroutines.launch
 
-/** Les réglages : la voix (l'installer, la choisir), « OK Evermind ». */
+/** Les réglages, par onglets : l'apparence, l'agenda (rappels, horaires de travail), la voix, l'assistant. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReglagesEcran(retour: () -> Unit) {
@@ -105,6 +110,7 @@ fun ReglagesEcran(retour: () -> Unit) {
     // (relu à chaque changement d'état de l'installation)
     val voixPrete = etatVoix.let { voix.voixInstallee }
     val eveilPret = etatEveil.let { voix.eveilInstalle }
+    var onglet by rememberSaveable { mutableIntStateOf(0) }
 
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -117,11 +123,30 @@ fun ReglagesEcran(retour: () -> Unit) {
             )
         },
     ) { marges ->
+        Column(Modifier.fillMaxSize().padding(marges)) {
+        // Par onglets : chaque partie tient sur l'écran, sans tout faire défiler
+        PrimaryTabRow(
+            selectedTabIndex = onglet,
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            contentColor = MaterialTheme.colorScheme.primary,
+            divider = {},
+        ) {
+            Onglets.forEachIndexed { i, nom ->
+                Tab(
+                    selected = onglet == i,
+                    onClick = { onglet = i },
+                    text = { Text(nom, maxLines = 1, softWrap = false, fontWeight = if (onglet == i) FontWeight.Bold else FontWeight.Normal) },
+                    selectedContentColor = MaterialTheme.colorScheme.primary,
+                    unselectedContentColor = ev.discret,
+                )
+            }
+        }
+        key(onglet) {
         Column(
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.fillMaxSize().padding(marges).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
-            Section("Thème", "Les couleurs d'Evermind, les mêmes thèmes que sur PC. Tes rendez-vous et réglages ne changent pas.") {
+            if (onglet == 0) Section("Thème", "Les couleurs d'Evermind, les mêmes thèmes que sur PC. Tes rendez-vous et réglages ne changent pas.") {
                 val themeChoisi by app.theme.collectAsStateWithLifecycle()
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Themes.chunked(2).forEach { ligne ->
@@ -135,7 +160,7 @@ fun ReglagesEcran(retour: () -> Unit) {
                 }
             }
 
-            Section("Rappels", "Les rappels donnés par défaut. Pour un rendez-vous en particulier, tu peux en choisir d'autres dans son formulaire (ou les dire : « rappelle-moi 2 jours avant »).") {
+            if (onglet == 1) Section("Rappels", "Les rappels donnés par défaut. Pour un rendez-vous en particulier, tu peux en choisir d'autres dans son formulaire (ou les dire : « rappelle-moi 2 jours avant »).") {
                 if (!notificationsPermises) {
                     Text("Evermind n'a pas le droit d'envoyer des notifications : aucun rappel ne s'affichera.",
                         color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
@@ -150,7 +175,7 @@ fun ReglagesEcran(retour: () -> Unit) {
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
-            Section("La voix", "Pour parler à Evermind comme sur PC : la dictée Whisper et la voix naturelle Kokoro. Téléchargées une seule fois, ensuite tout marche sans Internet et rien ne quitte le téléphone.") {
+            if (onglet == 2) Section("La voix", "Pour parler à Evermind comme sur PC : la dictée Whisper et la voix naturelle Kokoro. Téléchargées une seule fois, ensuite tout marche sans Internet et rien ne quitte le téléphone.") {
                 Installer(
                     titre = "Installer la voix (${enMo(Modeles.taille(Pack.VOIX))})",
                     pret = voixPrete,
@@ -178,11 +203,11 @@ fun ReglagesEcran(retour: () -> Unit) {
                 }
             }
 
-            SectionAssistant()
+            if (onglet == 3) SectionAssistant()
 
-            SectionHoraires()
+            if (onglet == 1) SectionHoraires()
 
-            Section("« OK Evermind »", "Dis « OK Evermind » quand l'agenda est à l'écran, puis ta demande. Une petite écoute sur le téléphone ne reconnaît que ces mots-là ; tout le reste est oublié aussitôt, rien n'est enregistré.") {
+            if (onglet == 2) Section("« OK Evermind »", "Dis « OK Evermind » quand l'agenda est à l'écran, puis ta demande. Une petite écoute sur le téléphone ne reconnaît que ces mots-là ; tout le reste est oublié aussitôt, rien n'est enregistré.") {
                 if (!voixPrete) {
                     Text("Installe d'abord la voix.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
@@ -198,8 +223,12 @@ fun ReglagesEcran(retour: () -> Unit) {
             }
             Spacer(Modifier.height(24.dp))
         }
+        }
+        }
     }
 }
+
+private val Onglets = listOf("Apparence", "Agenda", "Voix", "Assistant")
 
 /**
  * Les heures de chaque poste de travail, pour « je suis du matin lundi et mardi » (comme le réglage « Horaires » du
