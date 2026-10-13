@@ -29,7 +29,7 @@ Ouvrir le dossier dans Android Studio, attendre la synchronisation Gradle, puis 
 - `gradlew test` : les tests sur PC, dont la lecture des phrases comparée à Evermind PC (3 072 phrases).
 - Le catalogue de l'assistant du PC (125 demandes) avec l'IA du PC : `EVERMIND_LLAMA_SERVEUR` (llama-server.exe) et
   `EVERMIND_LLAMA_MODELE` (.gguf), puis `gradlew testDebugUnitTest --tests *CatalogueAssistantTest*` ; avec
-  `EVERMIND_SANS_IA=1`, les règles d'Evermind seules ; `EVERMIND_CATALOGUE=examen`, `contre-examen`, `bases`, `bases-verif`, `quotidien` ou `quotidien-verif` : les phrases
+  `EVERMIND_SANS_IA=1`, les règles d'Evermind seules ; `EVERMIND_CATALOGUE=examen`, `contre-examen`, `bases`, `bases-verif`, `quotidien`, `quotidien-verif`, `complexe` ou `complexe-verif` : les phrases
   nouvelles au lieu de celles du PC.
 - `gradlew connectedDebugAndroidTest` : la même comparaison sur le téléphone ou l'émulateur branché
   (Android lit les expressions régulières autrement que la JVM).
@@ -89,10 +89,13 @@ Le code est dans `app/src/main/java/io/github/jordanjacquot/evermind/` :
 - **L'assistant** (étape 5, en cours) : « décale le dentiste à jeudi », « supprime les raids de novembre », « j'ai payé
   le loyer », « qu'est-ce que j'ai demain ? », « supprime le coiffeur et mets le dentiste à 16 h ». Evermind comprend
   seul ces demandes (`assistant/Ordres.kt`), tout de suite et sur tous les téléphones, sans IA : 125 demandes sur 125
-  du catalogue du PC, et 292 sur 292 de six lots de phrases nouvelles : demandes de tous les jours (« supprime
+  du catalogue du PC, et 364 sur 364 de huit lots de phrases nouvelles : demandes de tous les jours (« supprime
   tout sauf le dentiste », « mon prochain rendez-vous »), dites à l'oral (« euh, le dentiste, tu peux le mettre jeudi
   plutôt ? »), à calculer (« dans combien de jours c'est l'anniversaire de Léa ? », « j'ai quoi après le dentiste ? »),
-  en plusieurs fois (« ajoute tennis samedi », puis « à 10 h » ; « supprime le foot », puis « et le coiffeur aussi »).
+  en plusieurs fois (« ajoute tennis samedi », puis « à 10 h » ; « supprime le foot », puis « et le coiffeur aussi »),
+  complexes (« deux jours avant l'anniversaire de Léa », « comme je suis malade, annule le foot », « mets le dentiste
+  jeudi, non vendredi », « si je décale le foot à vendredi, ça tombe sur quelque chose ? », « annule le foot et le
+  coiffeur, mais garde le dentiste »).
   En plus, pour les phrases qu'il ne reconnaît pas, une IA sur le téléphone (llama.cpp, comme sur PC), choisie selon
   sa mémoire pour ne jamais le ralentir : Qwen3 4B à partir de 12 Go, Qwen3.5 2B de 6 à 11 Go, Qwen3.5 0.8B de 4 à
   5 Go (avec un avertissement), rien en dessous. Ses consignes sont lues une seule fois, en arrière-plan, puis gardées

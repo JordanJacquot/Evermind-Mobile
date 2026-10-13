@@ -96,9 +96,15 @@ private const val RxCreer = "\\b(?:cree|creer|crees|creez|cre|ajout|rajout|mets|
 /** Verbes avant « -le » qui renvoient au rendez-vous dont on vient de parler. */
 private const val RxPronom = "\\b(?:supprim|suprim|effac|enlev|retir|vir|decal|deplac|met|repouss|avanc|recul|chang|boug|pass|annul|renomm|marqu|fai)\\w*-(?:le|la|les)\\b|\\b(?:le|la|l')\\s*(?:supprimer|effacer|enlever|decaler|deplacer|mettre|repousser|avancer|annuler|changer|bouger)\\b"
 /** Pour couper « supprime le foot et ajoute un tennis » en deux demandes. */
-private const val RxSuite = "\\s*,?\\s+(?:et puis|et ensuite|et|puis|ensuite)\\s+(?=(?:ajoute|rajoute|mets|met|supprime|efface|enleve|retire|decale|deplace|repousse|avance|recule|previens|rappelle|cree|note|change|renomme|marque|invite|programme|annule|passe|bouge|vire|fais)\\b)"
+private const val RxSuite = "(?:\\s*,?\\s+(?:et puis|et ensuite|et|puis|ensuite|mais)(?:\\s+(?:a la place|ensuite|aussi|apres|du coup))?\\s*,?\\s+|\\s*,\\s+)(?=(?:ajoute|rajoute|mets|met|supprime|efface|enleve|retire|decale|deplace|repousse|avance|recule|previens|rappelle|cree|note|change|renomme|marque|invite|programme|annule|passe|bouge|vire|fais|garde|conserve)(?:[- ](?:le|la|les|moi|lui))?\\b)"
 
 private val FormatJourAn = DateTimeFormatter.ofPattern("d MMMM yyyy", Fr)
+
+/** Les façons de dire un proche (« ma mère » pour Maman). */
+private val Proches = mapOf(
+    "maman" to listOf("mere", "ma mere", "mom"), "papa" to listOf("pere", "mon pere"), "mamie" to listOf("grand-mere", "ma grand-mere", "mamy", "mami"),
+    "papi" to listOf("grand-pere", "mon grand-pere", "papy"), "mere" to listOf("maman"), "pere" to listOf("papa"),
+)
 
 /** Ce qu'une partie de la phrase demande : des actions, ou ce qu'Evermind répond. */
 private class Lu(val actions: List<ActionIA> = emptyList(), val dit: String? = null, val attente: String? = null, val vise: RendezVous? = null)
@@ -111,8 +117,13 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
     fun comprendre(texte: String): ReponseIA? {
         var t = texte.trim().replace('’', '\'')
         discussion(net(t))?.let { return ReponseIA(emptyList(), it) }
-        // « Étends les vacances... non, mets le foot sur deux jours » : seulement ce qui vient après la correction
-        trouve(t, "^.+?(?:\\.\\.\\.|…|,)\\s*(?:non|enfin|pardon)\\s*,?\\s+(?<r>.{6,})$").takeIf { it.ok && !net(t).contient("^\\s*non\\b") }?.let { t = it.g("r")!! }
+        // « Mets le dentiste jeudi, non vendredi », « supprime le dentiste, euh non pardon, le coiffeur » : la correction
+        t = corrigeEnRoute(t)
+        // « Comme je suis malade, annule le foot », « annule le foot parce que je suis malade » : la raison ne compte pas
+        trouve(t, "^(?:[Cc]omme|[Vv]u que|[Pp]uisque|[ÉéEe]tant donn[ée] que|[Pp]arce que|[Dd]u coup|[Bb]ref|[Ee]n fait)\\b[^,]{3,},\\s*(?<r>.{4,})$").takeIf { it.ok }?.let { t = it.g("r")!! }
+        t = t.remplace("\\s*,?\\s*\\b(?:parce que|parce qu'|car|puisque|vu que)\\b[^,]*[.!]?$", "").ifBlank { t }
+        // « J'ai reçu un message : le coiffeur est reporté à samedi » : ce que dit le message
+        trouve(t, "^(?:j'ai (?:re[çc]u|eu) (?:un|une) (?:message|sms|mail|e-mail|appel|texto|notification)|on m'a (?:dit|pr[ée]venu|[ée]crit)|on vient de me dire)\\s*(?::|que|qu')\\s*(?<r>.{4,})$").takeIf { it.ok }?.let { t = it.g("r")!! }
         t = t.remplace("^(?:(?:euh|bon|alors|donc|ok evermind|okay evermind|evermind|ok|okay|ben|bah|eh bien|genre|finalement|du coup|en fait|ouais|ouai|hmm+|hum|attends|bon ben|tiens|dis)\\s*,?\\s+)+", "")
             .remplace("\\s*,?\\s*\\b(?:s'il te pla[iî]t|s'il vous pla[iî]t|stp|svp|steuplait|merci)\\b\\s*", " ")
             .remplace("\\b(?:genre|euh|tu vois)\\b\\s*,?\\s*", "").trim()
@@ -122,6 +133,20 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         if (!recente) memoire.oublier()
 
         discussion(s)?.let { return ReponseIA(emptyList(), it) }
+        // « Je pensais supprimer le foot, mais finalement non » : une idée abandonnée, rien à faire
+        if (s.contient("\\b(?:mais|et)\\s+(?:finalement|en fait|au final|bon)\\s+non\\b\\s*[.!]*$|^(?:je pensais|j'allais|je voulais|j'avais pense a|j'hesite a|j'hesitais a)\\b.*\\bmais\\b")) {
+            return ReponseIA(emptyList(), "D'accord, je ne touche à rien.")
+        }
+        // « Si je décale le foot à vendredi, ça tombe sur quelque chose ? », « si Max annule, je te le dirai » : une hypothèse
+        if (s.contient("^si\\s+(?!possible|tu peux|tu veux|ca ne te|c'est possible)")) {
+            if (estQuestion(s)) hypothese(t, s)?.let { return ReponseIA(emptyList(), it) }
+            return ReponseIA(emptyList(), "D'accord, je ne change rien pour l'instant.")
+        }
+        // « Il faudrait peut-être que je décale le dentiste, mais pas maintenant », « peut-être qu'un jour je supprimerai le
+        // raid » : une idée pour plus tard, pas une demande
+        if (s.contient("\\bmais pas (?:maintenant|tout de suite|encore|pour l'instant)\\b|\\b(?:peut-etre|un jour)\\b.*\\b(?:mais pas|plus tard)\\b|\\bpeut-etre qu'un jour\\b|(?<!d')\\bun jour\\b(?!\\s+(?:plus|de plus|avant|apres|sur))|\\b(?:supprimerai|annulerai|decalerai|deplacerai|changerai|effacerai|enleverai|repousserai)\\b|\\bil (?:se peut|est possible) que\\b")) {
+            return ReponseIA(emptyList(), "D'accord, je ne change rien pour l'instant. Dis-le-moi quand tu veux.")
+        }
         // « Ne supprime pas le foot », « laisse le foot comme il est » : surtout ne rien toucher
         if (s.contient("\\b(?:ne|n')\\s*(?:le |la |les |l'|lui |me |m')?(?:supprim|effac|enlev|touch|chang|decal|modifi|annul|boug|deplac|retir|vir)\\w*\\s+(?:pas|rien|jamais|plus)\\b|\\blaisse[rz]?\\s+(?:le|la|les|l'|mon|ma|mes|tout|ca)\\b.*\\b(?:comme (?:il|elle|ils|elles|c'est|ca) ?(?:est|sont|etait)?|tel quel|telle quelle|tels quels|tranquille|en place)\\b")) {
             return ReponseIA(emptyList(), "D'accord, je n'y touche pas.")
@@ -162,18 +187,56 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             }
         }
 
+        // « Deux jours avant l'anniversaire de Léa », « le lendemain du foot » : une vraie date
+        val tr = resoudreRelatifs(resoudreRangs(t))
+        if (tr != t) return comprendreDates(tr)
+        return comprendreDates(t)
+    }
+
+    private fun comprendreDates(t: String): ReponseIA? {
+        val s = net(t)
         // Deux demandes dans une phrase (« supprime le coiffeur et mets le dentiste à 16 h »)
         val coupes = Regex(RxSuite).findAll(s).map { it.range }.toList()
+        val liens = listOf("") + coupes.map { s.substring(it) }
         val parties = mutableListOf<String>()
         var debut = 0
         for (r in coupes) { parties += t.substring(debut, r.first); debut = r.last + 1 }
         parties += t.substring(debut)
         val lus = mutableListOf<Lu>()
         var precedente: RendezVous? = null
-        for ((i, p) in parties.withIndex()) {
-            val lu = partie(p.trim(' ', ',', '.'), precedente, null, seule = parties.size == 1, phraseEntiere = t) ?: return null
+        for ((i, p0) in parties.withIndex()) {
+            var p = p0.trim(' ', ',', '.')
+            // « …, et à la place mets un cinéma à 21 h » : le jour de ce qui vient d'être supprimé
+            if (i > 0 && (liens[i] + " " + net(p0)).contient("\\ba la place\\b") && lirePhrase(p, maintenant).jour == null) {
+                lus[i - 1].actions.firstOrNull { it.action == "supprimer" }?.let { a ->
+                    val j = a.periode?.let { lirePeriode(it, maintenant)?.debut } ?: a.cible?.let { (agenda.prochaine(it, maintenant) ?: it.quand).toLocalDate() }
+                    if (j != null) p = "$p le ${j.format(FormatJourAn)}"
+                }
+            }
+            val sp = net(p)
+            // « Tom ne pourra pas venir à la soirée, enlève-le » : c'est déjà fait
+            if (i > 0 && sp.contient("^(?:enleve|retire|vire|supprime|desinvite)[- ](?:le|la|les)\\s*[.!]?$") && lus[i - 1].actions.any { it.retirerPersonnes.isNotEmpty() }) { lus += Lu(); continue }
+            // « …, mets-le en important » juste après une création : pour le nouveau rendez-vous
+            val nomsSeuls = trouve(p, "^(?:[Aa]joute|[Rr]ajoute|[Ii]nvite)s?\\s+[A-ZÉÈÀ][\\p{L}-]+(?:\\s*(?:,|et)\\s*[A-ZÉÈÀ][\\p{L}-]+)*\\s*(?:aussi)?\\s*[.!]?$", ci = false).ok
+            if (i > 0 && lus[i - 1].actions.any { it.action == "creer" } && (sp.contient(RxPronom) || nomsSeuls || chercher(mots(sp)).isEmpty()) &&
+                !sp.contient("$RxSupp|^(?:ajoute|rajoute|cree|mets|met|programme|note)s?\\s+(?:moi\\s+)?(?:un|une|des)\\b")) {
+                val ph = lus[i - 1].actions.first { it.action == "creer" }.phrase ?: ""
+                val lp = lirePhrase(ph, maintenant)
+                val provisoire = AgendaIA.nouveau(lp.titre.ifBlank { "x" }, lp.quand ?: maintenant, lp.repetition, Sorte.RDV, lp.journee, maintenant)
+                val a = modification(p, sp, Cible(provisoire, 1, -1, -1, true, false))
+                if (a != null) { lus += Lu(listOf(a)); continue }
+            }
+            var lu = partie(p, precedente, null, seule = parties.size == 1, phraseEntiere = t)
+            // « Pour la soirée chez Max, ajoute Paul, … » : d'abord de quoi on parle
+            if (lu == null && i == 0 && parties.size > 1 && !sp.contient("$RxSupp|$RxModif|$RxCreer")) {
+                val c = chercher(mots(sp)).singleOrNull()
+                if (c != null) { precedente = c.rv; lus += Lu(); continue }
+            }
+            if (lu == null) return null
             lus += lu
-            precedente = lu.actions.lastOrNull()?.cible ?: precedente
+            precedente = lu.actions.lastOrNull()?.cible ?: lu.vise ?: precedente
+            // « Change l'heure du dentiste, mets 16 h 30 » : la question « quand ? » de la première partie a sa réponse
+            if (i > 0 && lus[i - 1].actions.isEmpty() && lus[i - 1].vise != null && lu.actions.any { it.cible?.id == lus[i - 1].vise!!.id }) lus[i - 1] = Lu()
             // « Supprime le ElleFest du 29 et mets-le sur 3 jours » : c'est un changement, pas une suppression
             if (i > 0 && lus[i - 1].actions.singleOrNull()?.action == "supprimer" && lu.actions.any { it.action == "modifier" && it.cible?.id == lus[i - 1].actions[0].cible?.id }) {
                 lus[i - 1] = Lu()
@@ -224,7 +287,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             else -> null
         }
         // (« crée l'anniversaire de Paul » ne vise pas celui de Léa)
-        if (c != null && c.score < 10 && creer && imposee == null) c = null
+        if (c != null && c.score < 9 && creer && imposee == null) c = null
         val generiqueDefini = s.contient("\\b(?:le|l'|ce|cet|cette|mon|ma|mes|les)\\s*$RxGenerique")
         if (c == null && (generiqueDefini || ((supp || s.contient(RxModif)) && !creer))) {
             c = designe(t, s)
@@ -250,9 +313,9 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             c = Cible(dernier, 1, -1, -1, true, false)
         }
         // « À 10 h. », « ah non, plutôt 8 h » juste après « ajoute tennis samedi » : seulement un moment, pour le rendez-vous dont on parle
-        val tMoment = t.remplace("^(?:(?:ah|oh|bah|ben|non|mais|enfin|disons|euh|plut[ôo]t|finalement|en fait|vers|plus|pour|mets[- ]le|mets[- ]la)\\b[\\s,]*)+", "")
+        val tMoment = t.remplace("^(?:(?:ah|oh|bah|ben|non|mais|enfin|disons|euh|plut[ôo]t|finalement|en fait|vers|plus|pour|mets[- ]le|mets[- ]la|mets|met|passe|fixe)\\b[\\s,]*)+", "")
         val lpm = lirePhrase(tMoment, maintenant)
-        if (c == null && dernier != null && imposee == null && !supp && !creer && lpm.titre.isBlank() && (lpm.heure != null || lpm.jour != null)) {
+        if (c == null && dernier != null && imposee == null && !supp && (!creer || tMoment != t) && lpm.titre.isBlank() && (lpm.heure != null || lpm.jour != null)) {
             c = Cible(dernier, 1, -1, -1, true, false)
         }
         // « Retire Tom. » juste après avoir parlé de la soirée
@@ -267,6 +330,9 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             if (supp && gens.isNotEmpty()) return Lu(listOf(ActionIA("modifier", retirerPersonnes = gens).apply { cible = c!!.rv }))
             detailRetire(t, s, c.rv, supp, parInvite = c.masque != null)?.let { a -> return Lu(listOf(a.apply { cible = c!!.rv })) }
         }
+
+        // « … mais garde le dentiste » : rien à faire pour lui
+        if (c != null && s.contient("^\\s*(?:garde|conserve|laisse)\\b")) return Lu(dit = "Je garde ${titreDe(c.rv)}.")
 
         // --- Supprimer
         if (supp) {
@@ -299,7 +365,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             }
         }
         // --- C'est fait
-        if (c != null && estFait(s)) return Lu(listOf(ActionIA("fait").apply { cible = c!!.rv }))
+        if (c != null && estFait(s) && !s.contient(RxModif)) return Lu(listOf(ActionIA("fait").apply { cible = c!!.rv }))
         // --- Créer : un verbe pour créer, et pas « le foot » qui existe déjà
         val lp = lirePhrase(t, maintenant)
         if ((creer && (c == null || !c.defini)) || c?.indefini == true) return Lu(listOf(creation(if (seule) phraseEntiere else t)))
@@ -322,7 +388,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
     /** Un nouveau rendez-vous : la phrase telle quelle, et ce que la lecture habituelle laisse passer. */
     private fun creation(phrase: String): ActionIA {
         // « de 10 h à midi » : lu comme « de 10 h à 12 h »
-        val ph = phrase.remplace("(\\bde\\s+\\d{1,2}\\s*h(?:\\s*\\d{2})?\\s+(?:à|a|jusqu'à)\\s+)midi\\b", "$112 h")
+        val ph = phrase.remplace("\\bau plus (?:tard|t[ôo]t)\\s+", "").remplace("(\\bde\\s+\\d{1,2}\\s*h(?:\\s*\\d{2})?\\s+(?:à|a|jusqu'à)\\s+)midi\\b", "$112 h")
             .remplace("(\\bde\\s+\\d{1,2}\\s*h(?:\\s*\\d{2})?\\s+(?:à|a|jusqu'à)\\s+)minuit\\b", "$10 h")
         val a = ActionIA("creer", phrase = ph)
         // « avec Tom et Inès » oublié quand un lieu suit (« … au Bouchon lyonnais »)
@@ -338,7 +404,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
      * avec maman », « je n'ai plus besoin de l'ordonnance », « j'ai préparé ma carte vitale » : un détail du rendez-vous.
      */
     private fun detailRetire(t: String, s: String, rv: RendezVous, supp: Boolean, parInvite: Boolean = false): ActionIA? {
-        val enlever = supp || s.contient("\\b(?:plus de|pas de|sans|plus besoin|pas besoin|n'est plus|ne sera plus|ne vient plus|ne viendra plus|ne vient pas|n'a plus)\\b")
+        val enlever = supp || s.contient("\\b(?:plus de|pas de|sans|plus besoin|pas besoin|n'est plus|ne sera plus|ne vient plus|ne viendra plus|ne vient pas|ne viendra pas|n'a plus|ne (?:pourra|peut|pourra finalement) pas (?:venir|etre la)|ne sera pas la|se desiste|annule sa venue)\\b")
         if (!enlever) {
             val pretes = rv.aPreparer.filter { !it.fait && mentionne(s, it.texte) }
             if (pretes.isNotEmpty() && s.contient("\\b(?:j'ai|c'est|deja|bien)\\b.*\\b(?:prepare|pris|mis|range|sorti|imprime|trouve|recupere|achete)")) {
@@ -351,7 +417,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             return ActionIA("modifier").apply { retirerRappels = rappelsTexte(t).ifEmpty { listOf("*") } }
         }
         val cles = clesTitre(rv.titre)
-        val gens = rv.avec.filter { n -> sansAccents(n) !in cles && s.contient("\\b" + Regex.escape(sansAccents(n)) + "\\b") }
+        val gens = rv.avec.filter { n -> sansAccents(n) !in cles && nomme(s, n) }
         if (gens.isNotEmpty() && !parInvite) return ActionIA("modifier", retirerPersonnes = gens)
         val choses = rv.aPreparer.filter { mentionne(s, it.texte) }
         if (choses.isNotEmpty()) return ActionIA("modifier").apply { retirerChoses = choses.map { it.texte } }
@@ -363,6 +429,128 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         val w = mots(s).map { it.texte.trimEnd('\'') }
         val ms = clesTitre(texte)
         return ms.isNotEmpty() && ms.all { k -> w.any { proche(it, k) } }
+    }
+
+    /** « le premier lundi de décembre », « le dimanche dans deux semaines » : la vraie date. */
+    private fun resoudreRangs(t: String): String {
+        var r = t
+        val rang = trouve(net(r), "\\b(?:le\\s+)?(?<n>premier|1er|deuxieme|second|2e|troisieme|3e|quatrieme|4e|dernier)\\s+(?<j>$RxJour)\\s+(?:de|d'|du mois de|du mois d')\\s*(?<m>$RxMois)(?:\\s+(?<a>\\d{4}))?\\b")
+        if (rang.ok) {
+            val mo = io.github.jordanjacquot.evermind.comprendre.mois(rang.g("m")!!)
+            val an = rang.g("a")?.toInt() ?: if (mo < today.monthValue) today.year + 1 else today.year
+            val jour = java.time.DayOfWeek.of(((io.github.jordanjacquot.evermind.comprendre.jourSemaine(rang.g("j")!!) + 6) % 7) + 1)
+            val n = rang.g("n")!!
+            val d = if (n == "dernier") LocalDate.of(an, mo, 1).with(java.time.temporal.TemporalAdjusters.lastInMonth(jour))
+                else LocalDate.of(an, mo, 1).with(java.time.temporal.TemporalAdjusters.dayOfWeekInMonth(when { n.startsWith("prem") || n == "1er" -> 1; n.startsWith("deux") || n.startsWith("sec") || n == "2e" -> 2; n.startsWith("trois") || n == "3e" -> 3; else -> 4 }, jour))
+            r = r.substring(0, rang.index) + "le ${d.format(FormatJourAn)}" + r.substring(rang.index + rang.valeur.length)
+        }
+        val dans = trouve(net(r), "\\b(?:le\\s+)?(?<j>$RxJour)\\s+(?:dans|d'ici)\\s+(?<n>une|deux|trois|quatre|\\d+)\\s+semaines?\\b")
+        if (dans.ok) {
+            val n = nombre(dans.g("n")!!.remplace("^une$", "un")) ?: 1
+            val lundi = io.github.jordanjacquot.evermind.comprendre.lundiDe(today.plusWeeks(n.toLong()))
+            val d = lundi.plusDays(((io.github.jordanjacquot.evermind.comprendre.jourSemaine(dans.g("j")!!) + 6) % 7).toLong())
+            r = r.substring(0, dans.index) + "le ${d.format(FormatJourAn)}" + r.substring(dans.index + dans.valeur.length)
+        }
+        return r
+    }
+
+    /** Le moment sans « au lieu de … » (« c'est à 16 h au lieu de 15 h »). */
+    private fun momentSans(t: String, c: Cible, lu: Modifs): String? {
+        val sans = t.remplace("\\s*,?\\s*\\bau lieu d(?:e|u|es|')\\s*[^,.;!?]*", "")
+        return moment(sans, net(sans), c, lu)
+    }
+
+    /**
+     * « Mets le dentiste jeudi, non vendredi », « décale le foot à 20 h, ah non, à 21 h », « supprime le dentiste, euh
+     * non pardon, le coiffeur » : ce qui suit la correction remplace la fin de ce qui la précède.
+     */
+    private fun corrigeEnRoute(t: String): String {
+        val m = trouve(t, "^(?<a>.{4,}?)(?:\\s*(?:\\.\\.\\.|…)\\s*|\\s*,\\s*)(?:(?:euh|ah|oh|bah)\\s*,?\\s*)?(?:non|enfin|pardon|ou plut[ôo]t|je veux dire|je voulais dire)(?:\\s*,?\\s*(?:pardon|plut[ôo]t|non|euh))*\\s*,?\\s+(?<b>.+)$")
+        if (!m.ok) return t
+        val a = m.g("a")!!.trim()
+        val b = m.g("b")!!.trim()
+        val sb = net(b)
+        // Une nouvelle demande entière (« … non, mets le foot sur deux jours ») : elle seule
+        if (sb.contient("^(?:$RxSupp|$RxModif|$RxCreer)") || sb.contient("^(?:annule|garde|laisse)\\b")) return b
+        // Sinon, la même sorte de chose à la fin de « a » : une heure, un jour, ou un rendez-vous
+        val rx = when {
+            sb.contient("^(?:a|vers|pour)?\\s*\\d{1,2}\\s*h") -> "(?:à|a|vers|pour)?\\s*\\d{1,2}\\s*h(?:\\s*\\d{2})?"
+            sb.contient("^(?:le\\s+)?(?:$RxJour|demain|apres-demain|\\d{1,2}(?:er)?\\b)") -> "(?:le\\s+)?(?:$RxJour|demain|apr[èe]s-demain|\\d{1,2}(?:er)?(?:\\s+$RxMois)?)(?:\\s+prochain)?"
+            sb.contient("^(?:le|la|les|l'|mon|ma|mes|du|au)\\b") -> "(?:le|la|les|l'|mon|ma|mes|du|au)\\s*[\\p{L}' -]+"
+            else -> return t
+        }
+        val dernier = tous(a, rx).lastOrNull() ?: return t
+        return a.substring(0, dernier.index).trimEnd() + " " + b
+    }
+
+    /**
+     * « Si je décale le foot à vendredi 15 h, ça tombe en même temps que quelque chose ? » : on regarde, sans rien
+     * changer.
+     */
+    private fun hypothese(t: String, s: String): String? {
+        val sansSi = t.remplace("^\\s*[Ss]i\\s+(?:je\\s+|j'|on\\s+)?", "").remplace("\\s*,.*$", "")
+        val lu = partie(sansSi.replaceFirstChar { it.uppercase() }, null, null) ?: return null
+        val a = lu.actions.singleOrNull { it.action == "modifier" && it.phrase != null } ?: return null
+        val rv = a.cible ?: return null
+        val p = lirePhrase(a.phrase!!, maintenant)
+        val q = p.quand ?: return null
+        val fin = p.fin ?: rv.fin?.let { q.plus(java.time.Duration.between(rv.quand, it)) }
+        val conf = agenda.conflits(q, fin, rv.id)
+        return if (conf.isEmpty()) "Non, ${quandRV(rv.copy(quand = q, fin = fin), q, today)}, tu n'as rien d'autre. Je n'ai rien changé."
+        else "Oui, ça tomberait en même temps que ${conf.joinToString(" et ") { titreDe(it.rv) }}. Je n'ai rien changé."
+    }
+
+    /**
+     * « deux jours avant l'anniversaire de Léa », « le lendemain du foot », « la veille du dentiste », « le même jour que
+     * la soirée », « juste après le foot », « une heure après le dentiste » : remplacés par la vraie date (et l'heure).
+     */
+    private fun resoudreRelatifs(t: String): String {
+        val s = net(t)
+        // (« préviens-moi une heure avant le foot » : un rappel, pas une date)
+        if (s.contient("\\b(?:previens|rappelle|avertis|alerte|notifie)[- ]moi\\b") && !s.contient("\\b(?:ajoute|cree|mets|met)\\b")) return t
+        if (s.contient("\\b(?:enleve|retire|supprime|plus de|pas de|sans)\\b.*\\brappels?\\b")) return t
+        val n = "(?:un|une|deux|trois|quatre|cinq|six|sept|huit|dix|quinze|\\d+)"
+        val x = trouve(s, "(?:\\b(?:au|a|le|la)\\s+)?\\b(?<r>(?<n>$n)\\s+(?<u>jours?|heures?|semaines?|minutes?|min)\\s+(?<s>avant|apres)|(?<l>(?:le |la )?(?:lendemain|surlendemain|veille)\\s+(?:de la |de l'|du |des |de |d')|(?:le )?meme jour que\\s+(?:le |la |l')?|juste (?<j>avant|apres)\\s+(?:le |la |l')?))(?:\\s*(?:de la |de l'|du |des |de |d'|le |la |l'))?")
+        if (!x.ok) return t
+        // Le rendez-vous de référence : nommé juste après
+        val apres = s.substring(x.index + x.valeur.length)
+        val decal = x.index + x.valeur.length
+        val m = mots(s)
+        val ref = tous(m).filter { it.score >= 9 && m[it.premier].debut >= decal && m[it.premier].debut - decal <= 12 }.minByOrNull { it.premier } ?: return t
+        val finRef = m[ref.dernier].fin
+        val rv = ref.rv
+        fun date(r: LocalDateTime): LocalDateTime? {
+            val l = x.g("l")
+            val j = x.g("j")
+            return when {
+                l != null && l.contains("surlendemain") -> r.plusDays(2)
+                l != null && l.contains("lendemain") -> r.plusDays(1)
+                l != null && l.contains("veille") -> r.minusDays(1)
+                l != null && l.contains("meme jour") -> r
+                j == "apres" -> rv.fin?.let { r.plus(java.time.Duration.between(rv.quand, it)) } ?: r.plusHours(1)
+                j == "avant" -> r.minusHours(1)
+                else -> {
+                    val k = (nombre(x.g("n")!!.remplace("^une?$", "un")) ?: 1).toLong() * if (x.g("s") == "avant") -1 else 1
+                    val u = x.g("u")!!
+                    when { u.startsWith("j") -> r.plusDays(k); u.startsWith("h") -> r.plusHours(k); u.startsWith("s") -> r.plusWeeks(k); else -> r.plusMinutes(k) }
+                }
+            }
+        }
+        // (une série : la première fois qui tombe encore à venir)
+        var depuis = today.atStartOfDay().minusDays(31)
+        var d: LocalDateTime? = null
+        for (k in 0 until 60) {
+            val r = agenda.prochaine(rv, depuis) ?: break
+            val c = date(r) ?: break
+            if (!c.toLocalDate().isBefore(today)) { d = c; break }
+            depuis = r.plusMinutes(1)
+            if (rv.laRepetition == null) break
+        }
+        if (d == null) return t
+        val avecHeure = x.g("u")?.let { it.startsWith("h") || it.startsWith("m") } == true || x.g("j") != null
+        val dit = "le ${d.format(FormatJourAn)}" + if (avecHeure && !rv.journee) " à ${heurePc(d)}" else ""
+        return (t.substring(0, x.index) + dit + " " + t.substring(finRef)).remplace("\\s+", " ").remplace("\\s+([,.!?])", "$1")
+            .remplace(",?\\s*le m[êe]me jour\\b", "").trim()
     }
 
     /** Le rendez-vous n'est pas dit (on demande lequel) ou n'existe pas (on le dit). */
@@ -394,7 +582,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
 
     /** « le dentiste et le foot », « le foot, le dentiste et la soirée » : des rendez-vous différents, l'un après l'autre. */
     private fun enumeres(m: List<Mot>, s: String): List<Cible> {
-        val l = tous(m).filter { it.score >= 10 }.sortedBy { it.premier }
+        val l = tous(m).filter { it.score >= 9 }.sortedBy { it.premier }
         if (l.size < 2 || l.map { it.premier }.distinct().size != l.size) return emptyList()
         for ((a, b) in l.zipWithNext()) {
             if (a.dernier >= b.premier) return emptyList()
@@ -414,7 +602,9 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
                 val i = m.indexOfFirst { proche(it.texte.trimEnd('\''), cle) }
                 if (i < 0) continue
                 places += i
-                if (cle in MotsFaibles) faible++ else fort++
+                val w = m[i].texte.trimEnd('\'')
+                val exact = w == cle || w == cle + "s" || w == cle + "x"
+                if (cle in MotsFaibles) faible++ else fort += if (exact) 10 else 9
             }
             if (places.isEmpty()) continue
             val p = places.min()
@@ -425,7 +615,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
                 if (w in Definis) { def = true; break }
                 if (w in Indefinis) { indef = true; break }
             }
-            res += Cible(rv, fort * 10 + faible, p, places.max(), def, indef)
+            res += Cible(rv, fort + faible, p, places.max(), def, indef)
         }
         return res
     }
@@ -439,6 +629,8 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             !(dits.isNotEmpty() && cibles.any { y -> y !== x && dits.all { d -> y.rv.avec.any { sansAccents(it) == d } } })
         }
         if (sansInvites.size == 1) return sansInvites[0]
+        // « Le dentiste m'a appelé » : celui qui est dit avec un article, pas « Appeler maman »
+        cibles.filter { it.defini }.singleOrNull()?.let { if (cibles.count { !it.defini } >= 1) return it }
         val jour = dateDite(t)
         if (jour != null) {
             val ce = cibles.filter { c -> agenda.entre(jour.atStartOfDay(), jour.plusDays(1).atStartOfDay()).any { it.rv.id == c.rv.id } }
@@ -491,11 +683,11 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         if (!m.ok) return null
         // « Supprime tout sauf l'anniversaire de Léa » : ceux-là restent
         val sauf = trouve(m.g("r")!!, "\\b(?:sauf|a part|excepte|hormis|mis a part|en dehors d[eu])\\b(?<x>.*)$")
-        val gardes = if (sauf.ok) tous(mots(sauf.g("x")!!)).filter { it.score >= 10 || tous(mots(sauf.g("x")!!)).none { o -> o.score >= 10 } }.map { it.rv.id }.toSet() else emptySet()
+        val gardes = if (sauf.ok) tous(mots(sauf.g("x")!!)).filter { it.score >= 9 || tous(mots(sauf.g("x")!!)).none { o -> o.score >= 9 } }.map { it.rv.id }.toSet() else emptySet()
         if (sauf.ok && gardes.isEmpty()) return ReponseIA(emptyList(), "Je n'ai pas trouvé ce que tu veux garder, je n'ai rien supprimé.")
         val reste = if (sauf.ok) m.g("r")!!.substring(0, sauf.index) else m.g("r")!!
         // « supprime tout le raid », « tous les raids de novembre » : un rendez-vous nommé, pas tout l'agenda
-        if (tous(mots(reste)).any { it.score >= 10 }) return null
+        if (tous(mots(reste)).any { it.score >= 9 }) return null
         val sorte = mapOf(
             "anniversaires?|anniv" to Sorte.ANNIV, "(?:choses|trucs) a faire|taches|a faire|rappels" to Sorte.A_FAIRE,
             "sports?" to Sorte.SPORT, "travail|boulot|ecole|cours" to Sorte.TRAVAIL, "sorties|soirees" to Sorte.SORTIE,
@@ -531,6 +723,13 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         if (d == "avant-hier") return today.minusDays(2)
         val p = lirePhrase("x $d", maintenant)
         return p.jour ?: p.quand?.toLocalDate()
+    }
+
+    /** La phrase parle-t-elle de cette personne ? (« ma mère » pour Maman, « mon père » pour Papa) */
+    private fun nomme(s: String, n: String): Boolean {
+        val x = sansAccents(n)
+        val autres = Proches[x].orEmpty()
+        return s.contient("\\b" + Regex.escape(x) + "\\b") || autres.any { s.contient("\\b$it\\b") }
     }
 
     /** « Retire Tom de la soirée » : ceux qui y étaient et que la phrase enlève. */
@@ -688,6 +887,8 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             return "toutes les deux semaines le $jour" + if (rv.journee) "" else " à ${heurePc(q)}"
         }
         if (lu.jour != null) return lu.jour
+        // (« à 16 h au lieu de 15 h » : l'ancienne heure ne compte pas)
+        if (s.contient("\\bau lieu d")) return momentSans(t, c, lu)
         // Sinon : ce qui reste quand on enlève le nom du rendez-vous et ce qui le désigne (« le raid de demain »)
         val m = mots(s)
         var reste = c.masque?.let { t.removeRange(it) } ?: t
@@ -735,7 +936,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
     // Questions
     // ---------------------------------------------------------------------------
     private fun estQuestion(s: String): Boolean {
-        val q = s.contient("\\?\\s*$") || s.contient("^\\s*(?:qu'est-ce|c'est quand|quand|ou\\b|ou est|c'est ou|combien|quel(?:le)?s?|a quelle|avec qui|est-ce que j'ai|est-ce que je|ai-je|suis-je|j'ai quoi|j'ai quelque chose|dis-moi|montre|liste|rappelle-moi (?:quand|ce que|ou))\\b")
+        val q = s.contient("\\?\\s*$") || s.contient("^\\s*(?:qu'est-ce|c'est quand|quand|ou\\b|ou est|c'est ou|combien|quel(?:le)?s?|a quelle|avec qui|est-ce que j'ai|est-ce que je|ai-je|suis-je|j'ai quoi|j'ai quelque chose|dis-moi|montre|liste|rappelle-moi (?:quand|ce que|ou|avec qui|a quelle|qui|combien|si|comment))\\b")
         if (!q) return false
         // « Tu peux enlever le dentiste ? » : une demande polie, pas une question
         return !s.contient("\\b(?:tu peux|peux-tu|tu pourrais|pourrais-tu|tu veux bien|est-ce que tu peux|est-ce que tu pourrais)\\s+(?!(?:me\\s+|m')?(?:dire|montrer|lister|rappeler ce|rappeler quand|donner))")
@@ -751,7 +952,19 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             s.contient("\\b(?:a faire|taches|choses a faire)\\b") -> Sorte.A_FAIRE
             else -> null
         }
-        if (c != null && sorte == null) { memoire.dernier = c.rv.id; return surRendezVous(c.rv, s) }
+        // « Qu'est-ce qui est le plus tôt, le dentiste ou le foot ? », « le dentiste c'est avant ou après le foot ? »
+        val deux = enumeres(mots(s), s).ifEmpty { tous(mots(s)).filter { it.score >= 9 }.distinctBy { it.rv.id }.takeIf { it.size == 2 }.orEmpty() }
+        if (deux.size >= 2 && s.contient("\\b(?:plus tot|plus tard|avant ou apres|apres ou avant|en premier|d'abord|le premier|lequel)\\b")) {
+            val f = deux.map { it.rv to (agenda.prochaine(it.rv, if (it.rv.journee) today.atStartOfDay() else maintenant) ?: it.rv.quand) }.sortedBy { it.second }
+            val (a, b) = f[0] to f[1]
+            return "${titreDe(a.first)} est avant : ${quandRV(a.first, a.second, today)}. Puis ${titreDe(b.first)}, ${quandRV(b.first, b.second, today)}."
+        }
+        if (c != null && sorte == null) {
+            memoire.dernier = c.rv.id
+            // « avec qui je vais chez le dentiste et à quelle heure » : chaque chose demandée
+            val bouts = s.split(Regex("\\s+et\\s+(?=(?:a quelle|ou|avec qui|qui|quand|combien|c'est quand|quel|ce que|ce qu'|qu'est-ce|si|comment))"))
+            return bouts.map { surRendezVous(c.rv, it) }.distinct().joinToString(" ")
+        }
         // « Quels rendez-vous sont importants ? »
         if (s.contient("\\bimportants?\\b|\\bimportantes?\\b")) {
             val v = agenda.aVenir().filter { it.rv.important }
