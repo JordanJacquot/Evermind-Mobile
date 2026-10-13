@@ -60,6 +60,8 @@ class FabriqueEntrainementTest {
     private val lieux = listOf("12 rue des Lilas, Lyon", "stade de Woippy", "Metz", "Nancy", "Thionville", "salle B", "chez Max", "gymnase", "3 avenue Foch, Metz")
     private val choses = listOf("Carte Vitale", "Ordonnance", "Radios", "Crampons", "Maillot", "Lait", "Pain", "Œufs", "Chips", "Gâteau", "Dossier", "Chargeur")
 
+    private val MotsSupprimer = "supprim|annul|enleve|retire|efface|vire|degage|plus lieu|tombe a l.eau|oublie|laisse tomber|pas aller|y vais pas|irai pas"
+    private val MotsDecaler = "decal|repousse|avance|recul|plus tard|plus tot|retard|bouge|deplace|pousse"
     private fun code(r: RendezVous) = "e" + r.id.replace("-", "").take(5)
     private fun h(t: LocalTime) = if (t.minute == 0) "${t.hour} h" else "${t.hour} h %02d".format(t.minute)
     private fun cle(titre: String) = motsTitre(titre).firstOrNull() ?: sansAccents(titre).split(' ').first()
@@ -139,7 +141,7 @@ class FabriqueEntrainementTest {
                 if (t.toLocalDate() != r.quand.toLocalDate()) return null
                 val dit = if (k > 0) "${if (k == 1L) "d'une heure" else "de $k heures"} plus tard" else "${if (k == -1L) "d'une heure" else "de ${-k} heures"} plus tôt"
                 return Tache(type, "décaler ${nom(r)} $dit", json(listOf(mapOf("action" to "modifier", "id" to code(r), "phrase" to "le ${t.format(fDate)} à ${h(t.toLocalTime())}"))),
-                    listOf(cle(r.titre))) { a, _ -> memeHeure(a, r, t.toLocalDate(), t.toLocalTime()) }
+                    listOf(cle(r.titre), MotsDecaler)) { a, _ -> memeHeure(a, r, t.toLocalDate(), t.toLocalTime()) }
             }
             "m_lieu" -> {
                 val r = choisir(tous) ?: return null
@@ -168,14 +170,14 @@ class FabriqueEntrainementTest {
             "m_important" -> {
                 val r = choisir(tous.filter { !it.important }) ?: return null
                 return Tache(type, "marquer ${nom(r)} comme important", json(listOf(mapOf("action" to "modifier", "id" to code(r), "important" to true))),
-                    listOf(cle(r.titre))) { a, _ -> a.first { it.id == r.id }.important }
+                    listOf(cle(r.titre), "important|priorit|urgent|rouge|etoile|crucial|essentiel")) { a, _ -> a.first { it.id == r.id }.important }
             }
             "m_rappel" -> {
                 val r = choisir(tous) ?: return null
                 val (dit, code) = listOf("la veille" to "veille", "une heure avant" to "m60", "deux jours avant" to "m2880", "le matin même" to "matin", "30 minutes avant" to "m30").random(rnd)
                 if (r.journee && code.startsWith("m") && code != "matin") return null
                 return Tache(type, "demander un rappel $dit pour ${nom(r)}", json(listOf(mapOf("action" to "modifier", "id" to code(r), "rappels" to listOf(dit)))),
-                    listOf(cle(r.titre))) { a, _ -> a.first { it.id == r.id }.rappels?.contains(code) == true }
+                    listOf(cle(r.titre), "rappel|previen|alerte|notif|sonne")) { a, _ -> a.first { it.id == r.id }.rappels?.contains(code) == true }
             }
             "m_titre" -> {
                 val r = choisir(tous.filter { it.sorte != Sorte.ANNIV }) ?: return null
@@ -196,18 +198,18 @@ class FabriqueEntrainementTest {
                 if (f.toLocalDate() != r.quand.toLocalDate()) return null
                 val dit = when (min) { 30L -> "une demi-heure"; 45L -> "trois quarts d'heure"; 60L -> "une heure"; 90L -> "une heure et demie"; else -> "deux heures" }
                 return Tache(type, "dire que ${nom(r)} dure $dit", json(listOf(mapOf("action" to "modifier", "id" to code(r), "phrase" to "le ${r.quand.format(fDate)} de ${h(r.quand.toLocalTime())} à ${h(f.toLocalTime())}"))),
-                    listOf(cle(r.titre))) { a, _ -> a.first { it.id == r.id }.let { x -> x.quand == r.quand && x.fin == f } }
+                    listOf(cle(r.titre), "dure|duree|jusqu|finit|termine|fin ")) { a, _ -> a.first { it.id == r.id }.let { x -> x.quand == r.quand && x.fin == f } }
             }
             "s_un" -> {
                 val r = choisir(ag) ?: return null
                 return Tache(type, "supprimer ${nom(r)}${if (r.repetition != null) " (toutes les fois)" else ""}", json(listOf(mapOf("action" to "supprimer", "id" to code(r)))),
-                    listOf(cle(r.titre))) { a, _ -> a.none { it.id == r.id } && a.size == ag.size - 1 }
+                    listOf(cle(r.titre), MotsSupprimer)) { a, _ -> a.none { it.id == r.id } && a.size == ag.size - 1 }
             }
             "s_fois" -> {
                 val r = choisir(series) ?: return null
                 val f = fois(r).toLocalDate()
                 return Tache(type, "supprimer seulement ${nom(r)} du ${f.format(fJour)} (les autres semaines restent)",
-                    json(listOf(mapOf("action" to "supprimer", "id" to code(r), "periode" to "le ${f.format(fDate)}"))), listOf(cle(r.titre))) { a, _ ->
+                    json(listOf(mapOf("action" to "supprimer", "id" to code(r), "periode" to "le ${f.format(fDate)}"))), listOf(cle(r.titre), MotsSupprimer)) { a, _ ->
                     val x = a.firstOrNull { it.id == r.id } ?: return@Tache false
                     val ax = AgendaIA(a, n)
                     ax.entre(f.atStartOfDay(), f.plusDays(1).atStartOfDay()).none { it.rv.id == r.id } && ax.entre(f.plusDays(7).atStartOfDay(), f.plusDays(8).atStartOfDay()).any { it.rv.id == x.id }
@@ -218,7 +220,7 @@ class FabriqueEntrainementTest {
                 val m = auj.plusMonths(1 + rnd.nextInt(2).toLong()).monthValue
                 val nm = mois[m - 1]
                 return Tache(type, "supprimer tous les « ${titreDe(r)} » du mois de $nm (les autres mois restent)", json(listOf(mapOf("action" to "supprimer", "id" to code(r), "periode" to nm))),
-                    listOf(cle(r.titre), sansAccents(nm))) { a, _ ->
+                    listOf(cle(r.titre), sansAccents(nm), MotsSupprimer)) { a, _ ->
                     val x = a.firstOrNull { it.id == r.id } ?: return@Tache false
                     val an = if (m < auj.monthValue) auj.year + 1 else auj.year
                     val d1 = LocalDate.of(an, m, 1)
@@ -315,7 +317,7 @@ class FabriqueEntrainementTest {
             "q_prendre" -> {
                 val r = choisir(tous.filter { it.aPreparer.isNotEmpty() }) ?: return null
                 return Tache(type, "demander ce qu'il faut prendre pour « ${titreDe(r)} »", json(emptyList(), "Pour ${titreDe(r)} : ${r.aPreparer.joinToString(", ") { it.texte }}."),
-                    listOf(cle(r.titre))) { a, res -> a == ag && res.dit.contains(r.aPreparer[0].texte) }
+                    listOf(cle(r.titre), "prendre|apporter|emporter|amener|emmener|besoin|prevoir|sac")) { a, res -> a == ag && res.dit.contains(r.aPreparer[0].texte) }
             }
             "q_jour" -> {
                 val (dit, d) = if (rnd.nextBoolean()) "demain" to auj.plusDays(1) else { val j = DayOfWeek.entries.random(rnd); jours[j.value - 1] to prochain(auj, j) }
@@ -340,7 +342,7 @@ class FabriqueEntrainementTest {
                 if (t == r2.quand.toLocalTime()) return null
                 return Tache(type, "supprimer ${nom(r1)} et mettre ${nom(r2)} à ${h(t)} le même jour",
                     json(listOf(mapOf("action" to "supprimer", "id" to code(r1)), mapOf("action" to "modifier", "id" to code(r2), "phrase" to "le ${r2.quand.format(fDate)} à ${h(t)}"))),
-                    listOf(cle(r1.titre), cle(r2.titre), "${t.hour}")) { a, _ -> a.none { it.id == r1.id } && memeHeure(a, r2, r2.quand.toLocalDate(), t) }
+                    listOf(cle(r1.titre), cle(r2.titre), MotsSupprimer, "${t.hour}")) { a, _ -> a.none { it.id == r1.id } && memeHeure(a, r2, r2.quand.toLocalDate(), t) }
             }
         }
         return null
