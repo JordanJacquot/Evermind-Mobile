@@ -11,6 +11,7 @@ plugins {
 android {
     namespace = "io.github.jordanjacquot.evermind"
     compileSdk = 37
+    ndkVersion = "29.0.14206865"
 
     defaultConfig {
         applicationId = "io.github.jordanjacquot.evermind"
@@ -21,6 +22,20 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Téléphones (arm) et émulateur du PC (x86_64) : la voix n'existe pas pour les autres
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+        // L'assistant (llama.cpp) : téléphones 64 bits et émulateur seulement
+        externalNativeBuild {
+            cmake {
+                abiFilters += listOf("arm64-v8a", "x86_64")
+                arguments += "-DCMAKE_BUILD_TYPE=Release"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path("src/main/cpp/CMakeLists.txt")
+            version = "3.31.6"
+        }
     }
 
     buildTypes {

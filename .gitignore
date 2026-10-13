@@ -19,3 +19,6 @@ keystore.properties
 
 # Bibliothèques téléchargées par Gradle (sherpa-onnx), avec leur empreinte vérifiée
 .bibliotheques/
+
+# Compilation du moteur de l'assistant (CMake)
+.cxx/
