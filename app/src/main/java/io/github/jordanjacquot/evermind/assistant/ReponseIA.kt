@@ -34,6 +34,10 @@ class ActionIA(
     var cible: RendezVous? = null
     /** Compris par les règles d'Evermind (Ordres) : tout est déjà lu, la phrase n'est pas relue. */
     var sure = false
+    /** Rappels à enlever (« * » : tous), choses à prendre à enlever, ou déjà prêtes (Ordres). */
+    var retirerRappels: List<String> = emptyList()
+    var retirerChoses: List<String> = emptyList()
+    var chosesFaites: List<String> = emptyList()
     /** Des postes de travail (« je suis du matin lundi et mardi »), lus par Evermind. */
     var postes: List<Poste>? = null
 

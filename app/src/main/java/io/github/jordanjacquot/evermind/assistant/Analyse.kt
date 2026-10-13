@@ -309,7 +309,7 @@ fun modifsTexte(texte: String, rv: RendezVous?, agenda: AgendaIA): Modifs {
     var r = trouve(t, "\\b(?:renomme|rebaptise|appelle)[- ]?(?:le|la|les|l')?\\b.*?\\s+en\\s+(?<t>.+?)\\s*[.!]?$")
     if (!r.ok) r = trouve(t, "\\bchange\\s+(?:le\\s+)?(?:nom|titre)\\b.*?\\s+en\\s+(?<t>.+?)\\s*[.!]?$")
     if (r.ok) res.titre = r.g("t")!!.trim(' ', '«', '»', '"', '\'')
-    for (x in tous(t, "\\b(?:[Aa]joute|[Rr]ajoute|[Ii]nvite)\\s+(?<n>$majX(?:\\s*(?:,|et)\\s*$majX)*)", ci = false)) {
+    for (x in tous(t, "\\b(?:[Aa]joute|[Rr]ajoute|[Ii]nvite)s?\\s+(?<n>$majX(?:\\s*(?:,|et)\\s*$majX)*)", ci = false)) {
         res.personnes += x.g("n")!!.split(Regex("\\s*(?:,|\\bet\\b)\\s*")).filter { it.isNotEmpty() && it[0] in "ABCDEFGHIJKLMNOPQRSTUVWXYZÉÈÊÀÂÎÏÔÛÇ" }
     }
     if (rv != null && rep != null && t.contient("\\b(?:c'est fini|fini|termin\\w*|arr[êe]t\\w*|stop\\w*|plus de|plus d')\\b")) {

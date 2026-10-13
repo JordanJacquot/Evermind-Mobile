@@ -195,7 +195,8 @@ class Actions(
         // Une simple création : si la phrase de l'utilisateur, lue par les règles d'Evermind, dit plus que celle de
         // l'IA (répétition, plusieurs jours, autre jour ou heure), c'est elle qui compte
         val inn = intentions(texte)
-        val seule = seuleAction && inn.creer && !inn.supp && !inn.modif
+        // (une phrase déjà lue par les règles d'Evermind n'est pas relue)
+        val seule = seuleAction && !a.sure && inn.creer && !inn.supp && !inn.modif
         var pu: Phrase? = null
         if (seule) {
             val lu = lirePhrase(texte, maintenant)
@@ -340,6 +341,12 @@ class Actions(
             if (codes.isNotEmpty()) r = r.copy(rappels = (rappelsParDefaut(rv) + codes).distinct())
         }
         if (a.retirerPersonnes.isNotEmpty()) r = r.copy(avec = r.avec.filter { x -> a.retirerPersonnes.none { it.equals(x, ignoreCase = true) } })
+        if (a.retirerRappels.isNotEmpty()) {
+            val actuels = r.rappels ?: rappelsParDefaut(rv)
+            r = r.copy(rappels = if ("*" in a.retirerRappels) emptyList() else actuels.filter { it !in a.retirerRappels })
+        }
+        if (a.retirerChoses.isNotEmpty()) r = r.copy(aPreparer = r.aPreparer.filter { it.texte !in a.retirerChoses })
+        if (a.chosesFaites.isNotEmpty()) r = r.copy(aPreparer = r.aPreparer.map { if (it.texte in a.chosesFaites) it.copy(fait = true) else it })
         val titre = a.titre?.takeIf { it != rv.titre } ?: rv.titre
         r = r.copy(titre = titreAffiche(titre).trim())
         return agenda.remplacer(r)
