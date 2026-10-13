@@ -245,6 +245,7 @@ class Actions(
         a.notes?.let { notes = it }
         if (a.chosesAPrendre.isNotEmpty()) aPreparer = (aPreparer + a.chosesAPrendre.filter { it.isNotBlank() }.map { majuscule(it) }).distinct()
         if (a.important == true) important = true
+        if (a.rappels.isNotEmpty()) rappels = (rappels.orEmpty() + a.rappels.flatMap { if (it.contient("^(m\\d+|veille|matin)$")) listOf(it) else rappelsTexte(it) }).distinct()
         if (seule && pu != null && pu.manque == Manque.RIEN) {
             // Les détails dits par l'utilisateur comptent même si l'IA les a oubliés
             if (pu.important) important = true

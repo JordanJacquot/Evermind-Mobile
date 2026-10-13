@@ -108,9 +108,9 @@ class Cerveau(private val contexte: Context, private val portee: CoroutineScope,
     /** Les heures des postes de travail, réglées par l'utilisateur. */
     val horaires = ReglagesHoraires(contexte)
 
-    val assistant = Assistant(moteur, rappelsParDefaut, { horaires.tous() }) { poste, heures ->
+    val assistant = Assistant(moteur, rappelsParDefaut, { horaires.tous() }, controle = { _choisi.value != ModeleAssistant.LEGER }, changerHoraire = { poste, heures ->
         lireHeures(heures)?.let { (a, b) -> horaires.changer(poste, a, b) }
-    }
+    })
 
     /** L'IA va-t-elle servir ? (installée et activée) */
     val avecIA: Boolean get() = pret

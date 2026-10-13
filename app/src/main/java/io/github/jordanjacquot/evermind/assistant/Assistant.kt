@@ -31,6 +31,13 @@ class Assistant(
     private val moteur: MoteurIA?,
     private val rappelsParDefaut: (RendezVous) -> List<String>,
     private val horaires: () -> Map<String, String> = { HorairesDefaut },
+    /** Les règles d'Evermind d'abord (false : l'IA seule, pour la comparer aux règles). */
+    private val regles: Boolean = true,
+    /**
+     * Quand la réponse des règles paraît douteuse, demander aussi à l'IA et garder la meilleure. Seulement avec une IA
+     * assez solide (le plus petit modèle se trompe plus souvent que les règles qu'il contrôlerait).
+     */
+    private val controle: () -> Boolean = { true },
     /** Change les heures d'un poste (« mon poste du matin, c'est de 7 h à 15 h ») : le poste, puis « 7 h à 15 h ». */
     private val changerHoraire: ((String, String) -> Unit)? = null,
 ) {
@@ -63,14 +70,99 @@ class Assistant(
         val agenda = AgendaIA(rendezVous, maintenant)
         // D'abord les règles d'Evermind : immédiat, et toujours la même chose pour la même phrase
         // (une erreur dans les règles ne doit jamais faire planter l'app : la phrase est alors « pas comprise »)
-        val compris = runCatching { Ordres(agenda, memoire, horaires()).comprendre(texte) }.getOrNull()
+        val avantMemoire = memoire.copie()
+        val avantAnnulations = annulations.toList()
+        val compris = if (!regles) null else runCatching { Ordres(agenda, memoire, horaires()).comprendre(texte) }.getOrNull()
         if (compris != null) {
             val res = Actions(agenda, rappelsParDefaut, annulations).appliquer(compris, emptyMap(), texte)
             retenir(rendezVous, agenda, compris, maintenant)
             // « Crée un rendez-vous chez le garagiste » sans dire quand : la phrase attend son jour (« lundi à 8 h »)
             memoire.incomplet = res.aCorriger
-            return res to agenda.liste.toList()
+            val parRegles = res to agenda.liste.toList()
+            // Une réponse douteuse : l'IA essaie aussi ; la sienne est gardée si elle n'a pas l'air douteuse
+            val raison = doute(texte, compris, res, rendezVous, agenda.liste)
+            if (System.getenv("EVERMIND_TRACE") != null && raison != null) println("DOUTE « $texte » : $raison")
+            if (!controle() || moteur == null || raison == null) return parRegles
+            val apresRegles = memoire.copie()
+            val annulationsRegles = annulations.toList()
+            memoire.reprendre(avantMemoire)
+            annulations.clear(); annulations += avantAnnulations
+            val parIA = runCatching { demanderIA(texte, rendezVous, maintenant) }.getOrNull()
+            // (l'IA n'est gardée que si sa réponse tient debout : ses titres viennent de la phrase, elle ne supprime pas
+            // sans qu'on le demande, et elle fait quelque chose là où les règles agissaient)
+            val changeRegles = agendaDiffere(rendezVous, parRegles.second)
+            if (parIA != null && doute(texte, null, parIA.first, rendezVous, parIA.second) == null && douteIA(texte, rendezVous, parIA.second, changeRegles) == null) return parIA
+            memoire.reprendre(apresRegles)
+            annulations.clear(); annulations += annulationsRegles
+            return parRegles
         }
+        // Les règles n'ont rien compris : la réponse de l'IA est vérifiée de la même façon (sinon rien n'est touché)
+        val parIA = demanderIA(texte, rendezVous, maintenant) ?: return null
+        if (doute(texte, null, parIA.first, rendezVous, parIA.second) != null && agendaDiffere(rendezVous, parIA.second) ||
+            douteIA(texte, rendezVous, parIA.second, false) != null) {
+            memoire.reprendre(avantMemoire)
+            annulations.clear(); annulations += avantAnnulations
+            return null
+        }
+        return parIA
+    }
+
+    /**
+     * Ce qui rend une réponse douteuse (null si elle a l'air bonne) : rien de compris, un titre créé fait de bouts de
+     * phrase, un « c'est changé » qui ne change rien, beaucoup de suppressions sans que « tout » ait été dit.
+     */
+    fun doute(texte: String, compris: ReponseIA?, res: Resultat, avant: List<RendezVous>, apres: List<RendezVous>): String? {
+        val dit = res.dit
+        if (dit.contient("je n'ai pas compris|je n'ai pas trouvé|je ne suis pas sûr|tu peux reformuler|Je ne trouve pas")) return "pas compris"
+        val ids = avant.associateBy { it.id }
+        val nouveaux = apres.filter { it.id !in ids }
+        for (n in nouveaux) {
+            // (un titre fait seulement de petits mots : « Le », « C'est »)
+            if (sansAccents(n.titre).split(Regex("[\\s']+")).all { it.length <= 3 || it in setOf("c'est", "cest", "est", "sont", "avec", "pour", "dans") }) return "titre vide « ${n.titre} »"
+            val mots = n.titre.split(Regex("\\s+"))
+            val sansRdv = n.titre.replace(Regex("(?i)rendez-vous"), "rdv")
+            if (mots.size > 8 || sansRdv.contient("\\b(?:je|j'|tu|il|on|nous|vous|mets|met|ajoute|rajoute|faut|veux|dois|peux|stp|donc|alors|plut[ôo]t|finalement|aussi|que|qui|quand)\\b")) return "titre « ${n.titre} »"
+        }
+        val partis = avant.filter { a -> apres.none { it.id == a.id } }
+        // (une série supprimée en entier alors que la phrase dit lesquelles : « les deux prochains raids »)
+        if (partis.any { it.repetition != null } && texte.contient("\\b(?:prochains?|prochaines?|deux|trois|quatre|cinq|seulement|juste|uniquement|de demain|cette semaine|ce mois|en (?:janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre))\\b") &&
+            !texte.contient("\\b(?:tous|toutes|tout|toujours|d[ée]finitivement|la s[ée]rie)\\b")) return "série entière supprimée"
+        if (partis.size >= 3 && !texte.contient("\\b(?:tout|tous|toutes|vide|agenda)\\b") && partis.any { !nomme(texte, it) }) return "${partis.size} suppressions"
+        if (compris != null && compris.actions.any { it.action == "modifier" && vide(it) } && nouveaux.isEmpty() && partis.isEmpty() &&
+            !agendaDiffere(avant, apres)) return "rien de changé"
+        return null
+    }
+
+    /** La phrase nomme-t-elle ce rendez-vous ? (un mot de son titre) */
+    private fun nomme(texte: String, rv: RendezVous): Boolean {
+        val t = sansAccents(texte)
+        return motsTitre(rv.titre).any { t.contains(it) } || sansAccents(rv.titre).split(' ').any { it.length >= 3 && t.contains(it) }
+    }
+
+    /** Une modification qui ne dit rien (aucun détail lu). */
+    private fun vide(a: ActionIA) = a.phrase == null && a.titre == null && a.lieu == null && a.notes == null && a.personnes.isEmpty() &&
+        a.chosesAPrendre.isEmpty() && a.important == null && a.rappels.isEmpty() && a.retirerPersonnes.isEmpty() && a.retirerRappels.isEmpty() &&
+        a.retirerChoses.isEmpty() && a.chosesFaites.isEmpty() && a.chosesNonFaites.isEmpty() && a.effacer.isEmpty() && a.lien == null && a.remplacerChose == null
+
+    private fun agendaDiffere(avant: List<RendezVous>, apres: List<RendezVous>) =
+        avant.size != apres.size || avant.any { a -> apres.firstOrNull { it.id == a.id } != a }
+
+    /** Ce qui rend la réponse de l'IA douteuse, comparée à la phrase et à ce que les règles ont fait. */
+    fun douteIA(texte: String, avant: List<RendezVous>, apres: List<RendezVous>, changeRegles: Boolean): String? {
+        val ids = avant.map { it.id }.toSet()
+        val nouveaux = apres.filter { it.id !in ids }
+        nouveaux.firstOrNull { !titreDit(it.titre, texte) }?.let { return "titre inventé « ${it.titre} »" }
+        val partis = avant.filter { a -> apres.none { it.id == a.id } }
+        if (partis.isNotEmpty() && !intentions(texte).supp && !texte.contient("\\b(?:annul|vire|enl[èe]v|retir|efface|d[ée]gage|plus besoin)")) return "suppression non demandée"
+        // (jamais un rendez-vous que la phrase ne nomme pas, sauf « tout »)
+        if (partis.any { !nomme(texte, it) } && !texte.contient("\\b(?:tout|tous|toutes|vide)\\b")) return "suppression d'un rendez-vous non nommé"
+        if (changeRegles && !agendaDiffere(avant, apres)) return "rien fait"
+        return null
+    }
+
+    /** La demande à l'IA (comme sur PC), quand les règles n'ont pas compris ou que leur réponse est douteuse. */
+    private suspend fun demanderIA(texte: String, rendezVous: List<RendezVous>, maintenant: LocalDateTime): Pair<Resultat, List<RendezVous>>? {
+        val agenda = AgendaIA(rendezVous, maintenant)
         val moteur = moteur ?: return null
         val ctx = Consignes.contexte(agenda)
         if (!conversationRecente(maintenant)) conversation.clear()
