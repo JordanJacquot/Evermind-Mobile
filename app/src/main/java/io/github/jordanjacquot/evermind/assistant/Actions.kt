@@ -134,6 +134,19 @@ class Actions(
                         dits += "J'ai supprimé $nom$tout."; ecrits += "Supprimé : $nom$tout. (Dis « annule » pour revenir en arrière.)"
                     }
                 }
+                a.action == "pasfait" -> {
+                    agenda.remplacer(rv.copy(fait = false))
+                    dits += "D'accord, $nom n'est pas encore fait."; ecrits += "Pas encore fait : $nom."
+                }
+                a.action == "dupliquer" -> {
+                    // Une copie, avec tous ses détails, à une autre date
+                    val copie = rv.copy(id = java.util.UUID.randomUUID().toString(), fait = false, aPreparer = rv.aPreparer.map { it.copy(fait = false) },
+                        cree = maintenant.truncatedTo(java.time.temporal.ChronoUnit.MINUTES))
+                    agenda.ajouter(copie)
+                    val r = modifier(copie, a)
+                    val (e, d) = note(r)
+                    dits += "C'est noté : $d (une copie de $nom)."; ecrits += "Copie de $nom : $e."
+                }
                 a.action == "fait" -> {
                     agenda.remplacer(rv.copy(fait = true))
                     dits += "Bien joué, $nom c'est fait."; ecrits += "Fait : $nom."
@@ -355,6 +368,12 @@ class Actions(
         }
         if (a.retirerChoses.isNotEmpty()) r = r.copy(aPreparer = r.aPreparer.filter { it.texte !in a.retirerChoses })
         if (a.chosesFaites.isNotEmpty()) r = r.copy(aPreparer = r.aPreparer.map { if (it.texte in a.chosesFaites) it.copy(fait = true) else it })
+        if (a.chosesNonFaites.isNotEmpty()) r = r.copy(aPreparer = r.aPreparer.map { if (it.texte in a.chosesNonFaites) it.copy(fait = false) else it })
+        a.remplacerChose?.let { (de, par) -> r = r.copy(aPreparer = r.aPreparer.map { if (it.texte == de) APreparer(par) else it }) }
+        if ("notes" in a.effacer) r = r.copy(notes = "")
+        if ("lieu" in a.effacer) r = r.copy(lieu = "")
+        if ("liste" in a.effacer) r = r.copy(aPreparer = emptyList())
+        if ("avec" in a.effacer) r = r.copy(avec = emptyList())
         val titre = a.titre?.takeIf { it != rv.titre } ?: rv.titre
         r = r.copy(titre = titreAffiche(titre).trim())
         return agenda.remplacer(r)

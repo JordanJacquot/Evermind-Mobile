@@ -38,6 +38,12 @@ class ActionIA(
     var retirerRappels: List<String> = emptyList()
     var retirerChoses: List<String> = emptyList()
     var chosesFaites: List<String> = emptyList()
+    /** Ce qu'il faut vider : « notes », « lieu », « liste », « avec ». */
+    var effacer: Set<String> = emptySet()
+    /** Des choses à prendre à décocher. */
+    var chosesNonFaites: List<String> = emptyList()
+    /** Une chose à prendre remplacée par une autre, à sa place (« le lait par du lait d'avoine »). */
+    var remplacerChose: Pair<String, String>? = null
     /** Un lien (visio, Discord...) à mettre sur le rendez-vous. */
     var lien: String? = null
     /** Des postes de travail (« je suis du matin lundi et mardi »), lus par Evermind. */
