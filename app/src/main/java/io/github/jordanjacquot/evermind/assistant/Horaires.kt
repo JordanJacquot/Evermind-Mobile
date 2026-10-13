@@ -10,6 +10,7 @@ import io.github.jordanjacquot.evermind.donnees.laRepetition
 import io.github.jordanjacquot.evermind.ui.enTexte
 import io.github.jordanjacquot.evermind.ui.majuscule
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
 // Horaires de travail en postes, comme sur PC (Get-HorairesTravail) : « je suis du matin lundi et mardi », « boulot
@@ -21,6 +22,38 @@ data class Poste(val phrase: String, val titre: String, val jour: String, val cr
 
 val HorairesDefaut = linkedMapOf("matin" to "6 h à 14 h", "journee" to "8 h à 17 h", "apresmidi" to "14 h à 22 h", "soir" to "14 h à 22 h", "nuit" to "22 h à 6 h")
 val CreneauxNoms = linkedMapOf("matin" to "matin", "journee" to "journée", "apresmidi" to "après-midi", "soir" to "soir", "nuit" to "nuit")
+/** « le poste du matin », « le poste de nuit »... */
+val PostesNoms = linkedMapOf("matin" to "du matin", "journee" to "de journée", "apresmidi" to "d'après-midi", "soir" to "du soir", "nuit" to "de nuit")
+
+/** « 6 h », « 7 h 30 » : comme les lit Evermind. */
+private fun heureEcrite(h: LocalTime) = if (h.minute == 0) "${h.hour} h" else "${h.hour} h %02d".format(h.minute)
+
+/** « 7 h 30 à 15 h » */
+fun ecrireHeures(debut: LocalTime, fin: LocalTime) = "${heureEcrite(debut)} à ${heureEcrite(fin)}"
+
+/** « 6 h à 14 h » (ou « 6h-14h », « 6:30 à 14 h ») : le début et la fin ; null si ce n'est pas ça. */
+fun lireHeures(texte: String): Pair<LocalTime, LocalTime>? {
+    val h = "(\\d{1,2})\\s*(?:h|:|heures?)\\s*(\\d{2})?"
+    val m = Regex("^\\s*(?:de\\s+)?$h\\s*(?:à|a|-|–|jusqu'à|jusqu'a)\\s*$h\\s*$", RegexOption.IGNORE_CASE).find(texte) ?: return null
+    fun heure(a: String, b: String) = a.toInt().takeIf { it in 0..23 }?.let { LocalTime.of(it, b.ifEmpty { "0" }.toInt().coerceIn(0, 59)) }
+    val debut = heure(m.groupValues[1], m.groupValues[2]) ?: return null
+    val fin = heure(m.groupValues[3], m.groupValues[4]) ?: return null
+    return if (debut == fin) null else debut to fin
+}
+
+/**
+ * « Mon poste du matin, c'est de 7 h à 15 h », « mes horaires de nuit sont 21 h - 5 h » : le poste et ses nouvelles
+ * heures (une règle pour toujours, pas un jour précis) ; null sinon.
+ */
+fun reglageHoraire(texte: String): Pair<String, String>? {
+    val t = sansAccents(texte.replace('’', '\''))
+    val m = Regex("\\b(?:postes?|horaires?|travail|boulot|equipes?|shifts?|je (?:suis|travaille|bosse|commence))\\s+(?:du|de|d'|en|le|la|l')?\\s*(?<c>matin(?:ee)?|journee|apres-midi|aprem|soir(?:ee)?|nuit)s?\\b(?<r>.*)$").find(t) ?: return null
+    if (Regex("\\b(?:$RxJour|demain|aujourd'hui|semaine|le \\d|tous les|chaque)").containsMatchIn(t)) return null
+    val r = m.groups["r"]!!.value.replace(Regex("^[\\s,:]*(?:c'est|ce sera|sont|est|ca sera|maintenant|desormais|commence|va|de)?\\s*(?:maintenant|desormais|plutot)?\\s*"), "")
+        .replace(Regex("[\\s.!]+$"), "").replace(Regex("\\s+(?:maintenant|desormais)$"), "")
+    val (a, b) = lireHeures(r) ?: return null
+    return creneauCle(m.groups["c"]!!.value) to ecrireHeures(a, b)
+}
 
 private fun creneauCle(mot: String) = mot.lowercase().let {
     when {

@@ -91,3 +91,5 @@ Le code est dans `app/src/main/java/io/github/jordanjacquot/evermind/` :
   sa mémoire pour ne jamais le ralentir : Qwen3 4B à partir de 12 Go, Qwen3.5 2B de 6 à 11 Go, Qwen3.5 0.8B de 4 à
   5 Go (avec un avertissement), rien en dessous. Ses consignes sont lues une seule fois, en arrière-plan, puis gardées
   sur le téléphone. Evermind vérifie tout avant d'agir, et « Annuler » revient en arrière.
+  Les heures de chaque poste de travail (matin, journée, après-midi, soir, nuit) se règlent dans les Réglages, ou
+  à la voix (« mon poste du matin, c'est de 7 h à 15 h ») ; « je suis du matin lundi et mardi » les utilise.

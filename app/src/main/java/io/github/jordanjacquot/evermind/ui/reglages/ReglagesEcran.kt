@@ -1,5 +1,15 @@
 package io.github.jordanjacquot.evermind.ui.reglages
 
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
+import io.github.jordanjacquot.evermind.assistant.CreneauxNoms
+import io.github.jordanjacquot.evermind.assistant.HorairesDefaut
+import io.github.jordanjacquot.evermind.assistant.PostesNoms
+import io.github.jordanjacquot.evermind.assistant.lireHeures
+import io.github.jordanjacquot.evermind.ui.majuscule
+import java.time.LocalTime
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -170,6 +180,8 @@ fun ReglagesEcran(retour: () -> Unit) {
 
             SectionAssistant()
 
+            SectionHoraires()
+
             Section("« OK Evermind »", "Dis « OK Evermind » quand l'agenda est à l'écran, puis ta demande. Une petite écoute sur le téléphone ne reconnaît que ces mots-là ; tout le reste est oublié aussitôt, rien n'est enregistré.") {
                 if (!voixPrete) {
                     Text("Installe d'abord la voix.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -187,6 +199,61 @@ fun ReglagesEcran(retour: () -> Unit) {
             Spacer(Modifier.height(24.dp))
         }
     }
+}
+
+/**
+ * Les heures de chaque poste de travail, pour « je suis du matin lundi et mardi » (comme le réglage « Horaires » du
+ * PC) : on touche un poste, on choisit le début puis la fin.
+ */
+@Composable
+private fun SectionHoraires() {
+    val app = LocalContext.current.applicationContext as EvermindApp
+    val reglages = app.cerveau.horaires
+    var heures by remember { mutableStateOf(reglages.tous()) }
+    var modifie by remember { mutableStateOf<String?>(null) }
+    var debut by remember { mutableStateOf<LocalTime?>(null) }
+    Section(
+        "Horaires de travail",
+        "Pour « je suis du matin lundi et mardi » ou « je travaille de nuit toute la semaine prochaine » : les heures de " +
+            "chacun de tes postes. Tu peux aussi le dire : « mon poste du matin, c'est de 7 h à 15 h ».",
+    ) {
+        HorairesDefaut.keys.forEach { c ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().clickable { modifie = c; debut = null }.padding(vertical = 8.dp),
+            ) {
+                Text(majuscule(CreneauxNoms.getValue(c)), modifier = Modifier.weight(1f))
+                Text(heures.getValue(c).replace(" à ", " – "), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
+            }
+        }
+        if (heures != HorairesDefaut) {
+            TextButton(onClick = { reglages.remettre(); heures = reglages.tous() }) { Text("Remettre les heures habituelles") }
+        }
+    }
+    val c = modifie ?: return
+    val actuelles = lireHeures(heures.getValue(c)) ?: (LocalTime.of(8, 0) to LocalTime.of(17, 0))
+    val d = debut
+    if (d == null) {
+        ChoixHeure("Poste ${PostesNoms[c]} : début", actuelles.first, fermer = { modifie = null }) { debut = it }
+    } else {
+        ChoixHeure("Poste ${PostesNoms[c]} : fin", actuelles.second, fermer = { modifie = null; debut = null }) { f ->
+            if (f != d) { reglages.changer(c, d, f); heures = reglages.tous() }
+            modifie = null; debut = null
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ChoixHeure(titre: String, initiale: LocalTime, fermer: () -> Unit, choisir: (LocalTime) -> Unit) {
+    val etat = rememberTimePickerState(initialHour = initiale.hour, initialMinute = initiale.minute, is24Hour = true)
+    AlertDialog(
+        onDismissRequest = fermer,
+        title = { Text(titre) },
+        text = { TimePicker(state = etat) },
+        confirmButton = { TextButton(onClick = { choisir(LocalTime.of(etat.hour, etat.minute)) }) { Text("OK") } },
+        dismissButton = { TextButton(onClick = fermer) { Text("Annuler") } },
+    )
 }
 
 /** Une section des réglages : un panneau de verre, son titre et ce qu'elle fait. */

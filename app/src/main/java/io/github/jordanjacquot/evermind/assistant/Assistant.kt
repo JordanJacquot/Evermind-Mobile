@@ -31,6 +31,8 @@ class Assistant(
     private val moteur: MoteurIA?,
     private val rappelsParDefaut: (RendezVous) -> List<String>,
     private val horaires: () -> Map<String, String> = { HorairesDefaut },
+    /** Change les heures d'un poste (« mon poste du matin, c'est de 7 h à 15 h ») : le poste, puis « 7 h à 15 h ». */
+    private val changerHoraire: ((String, String) -> Unit)? = null,
 ) {
     // Mémoire de la conversation : les 3 derniers échanges, s'ils datent de moins de 3 minutes
     private val conversation = mutableListOf<MessageIA>()
@@ -51,6 +53,13 @@ class Assistant(
      * null si ni les règles ni l'IA n'ont compris.
      */
     suspend fun demander(texte: String, rendezVous: List<RendezVous>, maintenant: LocalDateTime = LocalDateTime.now()): Pair<Resultat, List<RendezVous>>? {
+        // « Mon poste du matin, c'est de 7 h à 15 h » : un réglage, pas un rendez-vous
+        val reglage = if (changerHoraire != null) reglageHoraire(texte) else null
+        if (reglage != null) {
+            changerHoraire!!(reglage.first, reglage.second)
+            val d = "C'est noté : le poste ${PostesNoms[reglage.first]}, c'est maintenant de ${reglage.second}."
+            return Resultat(d, d, null, false) to rendezVous
+        }
         val agenda = AgendaIA(rendezVous, maintenant)
         // D'abord les règles d'Evermind : immédiat, et toujours la même chose pour la même phrase
         val compris = Ordres(agenda, memoire, horaires()).comprendre(texte)
