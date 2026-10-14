@@ -170,10 +170,10 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         t = t.remplace("\\b(supprime|efface|annule|enl[èe]ve|vire|retire)\\s+tout\\s+(?:pour\\s+|de\\s+)?(?=demain|apr[èe]s-demain|aujourd'hui|ce soir|ce week-end|cette semaine|$RxJour)", "$1 tout ce que j'ai ")
         trouve(t, "^(?<p>demain|apr[èe]s-demain|aujourd'hui|$RxJour(?:\\s+\\d{1,2})?)\\s*,?\\s*tout (?:est )?[àa] (?:effacer|supprimer|annuler|enlever)\\s*[.!]*$").takeIf { it.ok }?.let { t = "supprime tout ce que j'ai ${it.g("p")}" }
         // « du 20 au 27 » sans mois : le prochain mois où le 20 est encore à venir
-        t = t.remplace("\\bdu (\\d{1,2}) au (\\d{1,2})\\b(?!\\s*(?:$RxMoisNu|/|h\\b|heures?))") { x ->
-            val d1 = x.g("1")!!.toInt()
+        t = t.remplace("\\bdu (?<a>\\d{1,2}) au (?<b>\\d{1,2})\\b(?!\\s*(?:$RxMoisNu|/|h\\b|heures?))") { x ->
+            val d1 = x.g("a")!!.toInt()
             val m = if (d1 >= today.dayOfMonth) today else today.plusMonths(1)
-            "du $d1 au ${x.g("2")} ${m.format(DateTimeFormatter.ofPattern("MMMM", Fr))}"
+            "du $d1 au ${x.g("b")} ${m.format(DateTimeFormatter.ofPattern("MMMM", Fr))}"
         }
         if (t.isEmpty()) return null
         val s = net(t)
@@ -405,7 +405,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         if (c != null && c.score < 9 && imposee == null && !supp && !s.contient(RxModif)) c = null
         // « Rendez-vous chez le dentiste à Metz jeudi à 14 h 30 », « Dentiste à Épinal le 20 novembre à 9 h » : un rendez-vous
         // dit tel quel, comme dans la barre, est un nouveau rendez-vous (« le dentiste, c'est jeudi » change l'existant)
-        if (c != null && imposee == null && !supp && !s.contient(RxModif) && !pronom && !estFait(s)) {
+        if (c != null && imposee == null && !supp && !s.contient(RxModif) && !pronom && !estFait(s) && !s.contient("\\b(?:important|prioritaire|urgent)e?\\s*[.!]*$")) {
             val lpn = lirePhrase(t, maintenant)
             val debutNom = c.premier == 0 || s.contient("^(?:rendez-vous|rendez vous|rdv|nouveau rendez-vous|nouveau rdv)\\b")
             if (debutNom && !c.defini && (lpn.jour != null || lpn.repetition != null) && lpn.heure != null) return Lu(listOf(creation(if (seule) phraseEntiere else t)))
@@ -618,6 +618,9 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         // « met foot en important », « foot dimanche 18 19h important » : le rendez-vous qui existe, marqué important
         if (c != null && c.score >= 9 && s.contient("\\b(?:en|comme)\\s+(?:important|prioritaire|urgent)e?\\b|\\b(?:important|prioritaire|urgent)e?\\s*[.!]*$") && !s.contient("\\b(?:nouveau|nouvelle|autre|plus|pas|n'est|ne sera)\\b"))
             return Lu(listOf(ActionIA("modifier", important = true).apply { cible = c!!.rv }), vise = c.rv)
+        // « marque le dimanche 18 à 19 h comme important » : celui de ce moment-là
+        if (c == null && s.contient("\\b(?:en|comme)\\s+(?:important|prioritaire|urgent)e?\\b") && !s.contient("\\b(?:plus|pas|nouveau|nouvelle)\\b"))
+            parDate(t, s)?.rv?.let { r -> return Lu(listOf(ActionIA("modifier", important = true).apply { cible = r }), vise = r) }
         // « rappel la veille pour mardi 20 soirée max », « rappel la veille mardi 20 21h » : un rappel sur celui qui existe
         if (s.contient("^(?:(?:mets|met|ajoute|rajoute|programme|cree)(?:[- ]moi)?\\s+)?(?:un |le )?rappels?\\b")) {
             val codes = rappelsTexte(t)
