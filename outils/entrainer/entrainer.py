@@ -17,7 +17,7 @@ exemples_f, base, sortie = sys.argv[1], sys.argv[2], sys.argv[3]
 epoques = float(sys.argv[4]) if len(sys.argv) > 4 else 2
 rang = int(sys.argv[5]) if len(sys.argv) > 5 else 64
 LONGUEUR_MAX = 2048
-JETONS_PAR_LOT = 16384
+JETONS_PAR_LOT = 4096
 torch.manual_seed(0)
 random.seed(0)
 
