@@ -30,7 +30,10 @@ enum class ModeleAssistant(
     val ramConseillee: Double,
     val penalitePresence: Float,
     val avertissement: String? = null,
+    /** Entraîné pour Evermind : il connaît la tâche, les consignes courtes lui suffisent (Consignes.court). */
+    val entraine: Boolean = false,
 ) {
+    EVERMIND(Pack.IA_EVERMIND, "Evermind 0.6B", "Entraîné pour Evermind : le plus juste, rapide et léger.", 2.8, 0f, entraine = true),
     GRAND(Pack.IA_GRAND, "Qwen3 4B", "Le même que sur PC : il comprend même les phrases les plus tordues.", 10.5, 0f),
     MOYEN(Pack.IA_MOYEN, "Qwen3.5 2B", "Comprend presque toutes les phrases tordues.", 5.2, 1.5f),
     LEGER(Pack.IA_LEGER, "Qwen3.5 0.8B", "Léger, pour les petits téléphones.", 3.3, 1.5f,
@@ -40,7 +43,7 @@ enum class ModeleAssistant(
     val fichier get() = Modeles.fichiers.first { it.pack == pack }
 
     companion object {
-        /** Le meilleur assistant que ce téléphone peut faire tourner, ou null (moins de 4 Go : les règles d'Evermind suffisent). */
+        /** Le meilleur assistant que ce téléphone peut faire tourner, ou null (moins de 3 Go : les règles d'Evermind suffisent). */
         fun conseille(ramGo: Double): ModeleAssistant? = entries.firstOrNull { ramGo >= it.ramConseillee }
 
         fun ramGo(contexte: Context): Double {
@@ -94,7 +97,8 @@ class Cerveau(private val contexte: Context, private val portee: CoroutineScope,
                     MoteurLlama.liberer()
                     val fils = min(4, max(2, Runtime.getRuntime().availableProcessors() - 2))
                     etat(m).parentFile?.mkdirs()
-                    if (!MoteurLlama.charger(Modeles.fichier(contexte, m.fichier.vers).path, 6144, fils, etat(m).path)) { charge = null; return@withLock null }
+                    // (les consignes courtes du modèle entraîné tiennent dans moins de place)
+                    if (!MoteurLlama.charger(Modeles.fichier(contexte, m.fichier.vers).path, if (m.entraine) 3072 else 6144, fils, etat(m).path)) { charge = null; return@withLock null }
                     charge = m
                 }
                 val r = MoteurLlama.repondre(messagesEnJson(messages), schema, 400, m.penalitePresence)
@@ -108,7 +112,11 @@ class Cerveau(private val contexte: Context, private val portee: CoroutineScope,
     /** Les heures des postes de travail, réglées par l'utilisateur. */
     val horaires = ReglagesHoraires(contexte)
 
-    val assistant = Assistant(moteur, rappelsParDefaut, { horaires.tous() }, controle = { _choisi.value != ModeleAssistant.LEGER }, changerHoraire = { poste, heures ->
+    /** Les consignes du modèle choisi : courtes pour celui entraîné pour Evermind, celles du PC pour les autres. */
+    private fun consignes(): (AgendaIA) -> Contexte = if (_choisi.value?.entraine == true) Consignes::court else Consignes::contexte
+
+    val assistant = Assistant(moteur, rappelsParDefaut, { horaires.tous() }, controle = { _choisi.value != ModeleAssistant.LEGER },
+        consignes = { consignes() }, changerHoraire = { poste, heures ->
         lireHeures(heures)?.let { (a, b) -> horaires.changer(poste, a, b) }
     })
 
@@ -124,7 +132,7 @@ class Cerveau(private val contexte: Context, private val portee: CoroutineScope,
         if (!pret || etat(m).exists()) return
         portee.launch(Dispatchers.Default) {
             val agenda = AgendaIA(emptyList(), java.time.LocalDateTime.now())
-            val ctx = Consignes.contexte(agenda)
+            val ctx = consignes()(agenda)
             moteur.repondre(listOf(MessageIA("system", ctx.systeme), MessageIA("user", "Bonjour")), SchemaIA)
             android.util.Log.i("EvermindAssistant", "consignes préparées : ${etat(m).exists()}")
         }

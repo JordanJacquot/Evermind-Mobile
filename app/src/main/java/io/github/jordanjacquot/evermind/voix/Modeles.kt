@@ -12,8 +12,8 @@ import java.io.File
  */
 enum class Pack(val nom: String) {
     VOIX("la voix"), EVEIL("« OK Evermind »"),
-    // L'assistant : un seul des trois, choisi selon la mémoire du téléphone (assistant/ChoixAssistant.kt)
-    IA_GRAND("l'assistant"), IA_MOYEN("l'assistant"), IA_LEGER("l'assistant léger"),
+    // L'assistant : un seul, choisi selon la mémoire du téléphone (assistant/Cerveau.kt)
+    IA_EVERMIND("l'assistant"), IA_GRAND("l'assistant"), IA_MOYEN("l'assistant"), IA_LEGER("l'assistant léger"),
 }
 
 /** Comment un fichier téléchargé est rangé : tel quel, ou une archive dont on garde le contenu (sans son premier dossier). */
@@ -49,6 +49,10 @@ object Modeles {
         FichierModele(Pack.VOIX, "voix d'Evermind (Kokoro)", "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/kokoro-int8-multi-lang-v1_0.tar.bz2",
             "4c3052abaa60943a341f193888cf6abd68787dae6ab8ae5c925a706caa247e4e", 132303094, Forme.TAR_BZ2, "kokoro",
             garder = listOf("model.int8.onnx", "voices.bin", "tokens.txt", "espeak-ng-data/", "LICENSE"), temoin = "kokoro/model.int8.onnx"),
+        // (entraîné pour Evermind par outils/entrainer, publié dans les versions du projet)
+        FichierModele(Pack.IA_EVERMIND, "assistant (Evermind 0.6B)",
+            "https://github.com/JordanJacquot/Evermind-Mobile/releases/download/assistant-v1/evermind-0.6b-q8_0.gguf",
+            "23343a94c57b86f41921f68e96d0edb1b2504d78933fdb1efd2e56aef292afb0", 639446880, Forme.FICHIER, "assistant/evermind-0.6b-q8_0.gguf"),
         FichierModele(Pack.IA_GRAND, "assistant (Qwen3 4B, comme sur PC)",
             "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/a06e946bb6b655725eafa393f4a9745d460374c9/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
             "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597", 2497281120, Forme.FICHIER, "assistant/Qwen3-4B-Instruct-2507-Q4_K_M.gguf"),

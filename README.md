@@ -100,9 +100,17 @@ Le code est dans `app/src/main/java/io/github/jordanjacquot/evermind/` :
   entière supprimée alors qu'on en visait une partie...) : il demande alors à l'IA, et ne garde sa réponse que si elle
   tient debout (titres venus de la phrase, rien de supprimé sans être nommé). Sur des phrases neuves mesurées à
   l'aveugle : 80 % avec les règles seules, 87 % avec ce contrôle par l'IA (4B ou 2B).
-  En plus, pour les phrases qu'il ne reconnaît pas, une IA sur le téléphone (llama.cpp, comme sur PC), choisie selon
-  sa mémoire pour ne jamais le ralentir : Qwen3 4B à partir de 12 Go, Qwen3.5 2B de 6 à 11 Go, Qwen3.5 0.8B de 4 à
-  5 Go (avec un avertissement), rien en dessous. Ses consignes sont lues une seule fois, en arrière-plan, puis gardées
-  sur le téléphone. Evermind vérifie tout avant d'agir, et « Annuler » revient en arrière.
+  Sur des demandes de base écrites par une IA (deux séries, outils/generer-phrases.py ... base) : 95 et 97 %.
+  En plus, pour les phrases qu'il ne reconnaît pas, une IA sur le téléphone (llama.cpp, comme sur PC). Conseillée dès
+  3 Go : **Evermind 0.6B**, un Qwen3 0.6B entraîné pour Evermind (`outils/entrainer/`, publié dans la version
+  `assistant-v1` du projet, 639 Mo) : sur 187 phrases libres jamais vues, 76 % seul, mieux que Qwen3 4B (63 %),
+  avec des consignes d'une phrase au lieu de 2 300 jetons. Les autres restent au choix si la mémoire le permet :
+  Qwen3 4B (12 Go), Qwen3.5 2B (6 Go), Qwen3.5 0.8B (4 Go, avec un avertissement). Les consignes sont lues une seule
+  fois, en arrière-plan, puis gardées sur le téléphone. Evermind vérifie tout avant d'agir, et « Annuler » revient en
+  arrière.
+  L'entraînement (`outils/entrainer/nuit.ps1`, une nuit sur une carte graphique) : la fabrique
+  (`FabriqueEntrainementTest`) tire des agendas au hasard et des demandes, avec la bonne réponse vérifiée par les
+  actions d'Evermind ; le Qwen3 4B du PC écrit les phrases de l'utilisateur (un juge écarte les mauvaises) ; puis LoRA
+  et conversion en GGUF.
   Les heures de chaque poste de travail (matin, journée, après-midi, soir, nuit) se règlent dans les Réglages, ou
   à la voix (« mon poste du matin, c'est de 7 h à 15 h ») ; « je suis du matin lundi et mardi » les utilise.

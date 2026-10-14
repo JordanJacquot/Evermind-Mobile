@@ -22,10 +22,13 @@ class Contexte(val systeme: String, val codes: Map<String, String>)
 const val ConsignesCourtes = "Tu es l'assistant de l'agenda Evermind. Réponds seulement en JSON {\"actions\": [...], \"reponse\": \"...\"}."
 
 object Consignes {
-    /** Pour le modèle entraîné : la consigne courte, puis la date et l'agenda (les mêmes que pour les autres modèles). */
+    /**
+     * Pour le modèle entraîné : la consigne courte, puis la date et l'agenda (les mêmes que pour les autres modèles). La
+     * marque du cache est retirée avant que le modèle lise (le texte est celui de l'entraînement).
+     */
     fun court(agenda: AgendaIA): Contexte {
         val c = contexte(agenda)
-        return Contexte(ConsignesCourtes + "\n\n" + c.systeme.substringAfter(MoteurLlama.MARQUE_CACHE), c.codes)
+        return Contexte(ConsignesCourtes + "\n\n" + MoteurLlama.MARQUE_CACHE + c.systeme.substringAfter(MoteurLlama.MARQUE_CACHE), c.codes)
     }
 
     fun contexte(agenda: AgendaIA): Contexte {

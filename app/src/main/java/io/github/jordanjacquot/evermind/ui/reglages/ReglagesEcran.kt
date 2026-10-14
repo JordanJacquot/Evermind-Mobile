@@ -395,8 +395,8 @@ private fun SectionAssistant() {
             conseille == null -> Text("Il n'a pas assez de mémoire pour une IA sans ralentir le reste. Evermind comprend quand même tes demandes avec ses règles, la voix et les rappels marchent normalement.",
                 style = MaterialTheme.typography.bodyMedium)
             else -> {
-                // Les assistants possibles : le conseillé, et les plus légers (jamais plus gros que ce que la mémoire permet)
-                ModeleAssistant.entries.filter { it.ramConseillee <= conseille.ramConseillee }.forEach { m ->
+                // Les assistants possibles : ceux que la mémoire du téléphone permet, le conseillé en premier
+                ModeleAssistant.entries.filter { it.ramConseillee <= cerveau.ramGo }.forEach { m ->
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { vise = m }) {
                         RadioButton(selected = vise == m, onClick = { vise = m })
                         Column(Modifier.weight(1f)) {
