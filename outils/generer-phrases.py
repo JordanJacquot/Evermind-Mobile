@@ -1,7 +1,7 @@
 # Fait écrire par une IA (Qwen3 4B, le llama-server d'Evermind PC) des façons variées de demander des choses à Evermind,
 # pour tester l'assistant avec des phrases qu'aucun humain du projet n'a écrites. Chaque intention a un identifiant ;
 # la vérification de ce qui doit se passer est dans CatalogueAssistantTest (intentionsGenerees).
-# Usage : python outils/generer-phrases.py <sortie.jsonl> [graine] [nombre par intention]
+# Usage : python outils/generer-phrases.py <sortie.jsonl> [graine] [nombre par intention] [base]
 import datetime
 import json
 import os
@@ -87,6 +87,21 @@ Varie les gens et les styles : familier, poli, pressé, âgé, jeune, phrase lon
 hésitations de l'oral (« euh », « du coup »), sans ponctuation comme une dictée, une petite faute de frappe parfois.
 Chaque phrase doit demander exactement cela, rien d'autre, et rester claire pour un humain. Les dates et heures doivent
 être les mêmes. Réponds seulement en JSON : {{"phrases": ["...", "..."]}}"""
+
+# « base » : les demandes de tous les jours, courtes et simples (celles que les règles doivent réussir à coup sûr)
+BASE = ["c1", "c2", "c3", "c6", "c7", "c8", "c10", "m1", "m3", "m4", "m5", "m8", "m9", "m10", "s1", "s3", "s6", "s7", "f1", "f2",
+        "q1", "q2", "q3", "q4", "q6", "q8", "n3"]
+CONSIGNE_BASE = """Tu joues des utilisateurs français ordinaires d'un agenda qu'on commande à la voix ou à l'écrit, nommé Evermind.
+{agenda}
+
+Écris {n} façons différentes et SIMPLES de demander : {intention}.
+Des phrases courtes et directes, comme on parle vraiment à son téléphone : un ordre (« supprime le foot »), une question
+(« c'est quand le dentiste ? »), poli ou non, avec ou sans « s'il te plaît », parfois sans ponctuation comme une dictée.
+Pas de longues explications, pas d'hésitations. Les dates et heures doivent être les mêmes.
+Réponds seulement en JSON : {{"phrases": ["...", "..."]}}"""
+if len(sys.argv) > 4 and sys.argv[4] == "base":
+    CONSIGNE = CONSIGNE_BASE
+    INTENTIONS = {k: v for k, v in INTENTIONS.items() if k in BASE}
 
 serveur = os.path.expandvars(r"%LOCALAPPDATA%\Evermind\voix\ia\llama-server.exe")
 modele = os.path.expandvars(r"%LOCALAPPDATA%\Evermind\voix\ia\Qwen3-4B-Instruct-2507-Q4_K_M.gguf")
