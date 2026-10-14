@@ -17,7 +17,7 @@ exemples_f, base, sortie = sys.argv[1], sys.argv[2], sys.argv[3]
 epoques = float(sys.argv[4]) if len(sys.argv) > 4 else 2
 rang = int(sys.argv[5]) if len(sys.argv) > 5 else 64
 LONGUEUR_MAX = 2048
-JETONS_PAR_LOT = 4096
+JETONS_PAR_LOT = 12288
 torch.manual_seed(0)
 random.seed(0)
 
@@ -73,13 +73,22 @@ def tenseurs(lot):
         att[i, :len(s)] = 1
     return ids.cuda(), lab.cuda(), att.cuda()
 
+def calculer_perte(ids, lab, att):
+    # Les prédictions (152 000 mots possibles par jeton) ne sont calculées que pour la réponse : sur tout l'agenda,
+    # elles rempliraient la carte graphique pour rien.
+    interne = modele.get_base_model()
+    h = interne.model(input_ids=ids, attention_mask=att).last_hidden_state
+    garde = lab[:, 1:] != -100
+    logits = interne.lm_head(h[:, :-1][garde]).float()
+    return torch.nn.functional.cross_entropy(logits, lab[:, 1:][garde])
+
 def perte_validation():
     modele.eval()
     tot = n = 0
     with torch.no_grad():
         for lot in lots(valid, False):
             ids, lab, att = tenseurs(lot)
-            tot += modele(input_ids=ids, attention_mask=att, labels=lab).loss.item() * len(lot)
+            tot += calculer_perte(ids, lab, att).item() * len(lot)
             n += len(lot)
     modele.train()
     return tot / n
@@ -100,7 +109,7 @@ while pas < total:
         if pas >= total:
             break
         ids, lab, att = tenseurs(lot)
-        perte = modele(input_ids=ids, attention_mask=att, labels=lab).loss
+        perte = calculer_perte(ids, lab, att)
         perte.backward()
         torch.nn.utils.clip_grad_norm_(modele.parameters(), 1.0)
         opt.step()
@@ -108,7 +117,7 @@ while pas < total:
         opt.zero_grad(set_to_none=True)
         pas += 1
         moy = perte.item() if moy is None else 0.98 * moy + 0.02 * perte.item()
-        if pas % 50 == 0:
+        if pas % 25 == 0:
             print(f"pas {pas}/{total}  perte {moy:.4f}  {time.time() - debut:.0f} s", flush=True)
         if pas % 500 == 0 or pas == total:
             print(f"  validation : {perte_validation():.4f}", flush=True)
