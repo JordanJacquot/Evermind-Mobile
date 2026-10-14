@@ -37,7 +37,8 @@ import kotlin.math.abs
  */
 class CatalogueAssistantTest {
     private val fr = Locale.FRENCH
-    private val maintenant = LocalDateTime.now().withSecond(0).withNano(0)
+    // (EVERMIND_MAINTENANT : rejouer des phrases écrites un autre jour, « le dentiste vendredi 16 »)
+    private val maintenant = (System.getenv("EVERMIND_MAINTENANT")?.let { LocalDateTime.parse(it) } ?: LocalDateTime.now()).withSecond(0).withNano(0)
     private val auj = maintenant.toLocalDate()
     private val dentiste = auj.plusDays(3)
     private val foot = auj.plusDays(4)
