@@ -102,6 +102,7 @@ class Assistant(
         val parIA = demanderIA(texte, rendezVous, maintenant) ?: return null
         if (doute(texte, null, parIA.first, rendezVous, parIA.second) != null && agendaDiffere(rendezVous, parIA.second) ||
             douteIA(texte, rendezVous, parIA.second, false) != null) {
+            if (System.getenv("EVERMIND_TRACE") != null) println("REJET IA « $texte » : ${doute(texte, null, parIA.first, rendezVous, parIA.second) ?: douteIA(texte, rendezVous, parIA.second, false)}")
             memoire.reprendre(avantMemoire)
             annulations.clear(); annulations += avantAnnulations
             return null
@@ -173,7 +174,9 @@ class Assistant(
         var relance = false
         var reponse: ReponseIA
         while (true) {
-            reponse = ReponseIA.lire(moteur.repondre(envoyes, SchemaIA)) ?: return null
+            val brut = moteur.repondre(envoyes, SchemaIA)
+            if (System.getenv("EVERMIND_TRACE") != null) println("IA « $texte » : $brut")
+            reponse = ReponseIA.lire(brut) ?: return null
             val decision = decider(texte, reponse, relance, ctx.codes, agenda, conversationRecente(maintenant))
             if (decision.first != null && !relance) {
                 relance = true

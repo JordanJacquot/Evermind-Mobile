@@ -51,13 +51,43 @@ class FabriqueEntrainementTest {
         Modele("Appeler maman", Sorte.A_FAIRE, LocalTime.of(18, 0)), Modele("Payer le loyer", Sorte.A_FAIRE, LocalTime.of(10, 0), "mois"),
         Modele("Courses", Sorte.A_FAIRE, LocalTime.of(10, 0)), Modele("Sortir les poubelles", Sorte.A_FAIRE, LocalTime.of(20, 0), "semaine"),
         Modele("Anniversaire de Léa", Sorte.ANNIV, null, "an"), Modele("Anniversaire de Paul", Sorte.ANNIV, null, "an"),
+        Modele("Virement épargne", Sorte.A_FAIRE, LocalTime.of(9, 0), "mois"), Modele("Facture internet", Sorte.A_FAIRE, null, "mois"),
         Modele("Train pour Paris", Sorte.VOYAGE, LocalTime.of(7, 45)), Modele("Cours de guitare", Sorte.TRAVAIL, LocalTime.of(17, 0), "semaine"),
     )
-    private val nouveaux = listOf("Dîner chez Paul" to Sorte.SORTIE, "Ostéo" to Sorte.SANTE, "Pédiatre" to Sorte.SANTE, "Réunion de chantier" to Sorte.TRAVAIL,
-        "Badminton" to Sorte.SPORT, "Concert" to Sorte.SORTIE, "Visite chez mamie" to Sorte.RDV, "Contrôle technique" to Sorte.RDV, "Bowling" to Sorte.SORTIE,
-        "Footing" to Sorte.SPORT, "Atelier poterie" to Sorte.SORTIE, "Rendez-vous à la banque" to Sorte.RDV, "Vétérinaire" to Sorte.SANTE, "Brunch" to Sorte.SORTIE)
-    private val gens = listOf("Max", "Inès", "Tom", "Julie", "Paul", "Hugo", "Sarah", "Lucas", "Chloé", "Maman", "Marc", "Emma")
-    private val lieux = listOf("12 rue des Lilas, Lyon", "stade de Woippy", "Metz", "Nancy", "Thionville", "salle B", "chez Max", "gymnase", "3 avenue Foch, Metz")
+    private val nouveaux = listOf(
+        "Dîner chez Paul" to Sorte.RDV, "Ostéo" to Sorte.RDV, "Pédiatre" to Sorte.RDV, "Réunion de chantier" to Sorte.RDV, "Badminton" to Sorte.RDV, "Concert" to Sorte.RDV,
+        "Visite chez mamie" to Sorte.RDV, "Contrôle technique" to Sorte.RDV, "Bowling" to Sorte.RDV, "Footing" to Sorte.RDV, "Atelier poterie" to Sorte.RDV, "Rendez-vous à la banque" to Sorte.RDV,
+        "Vétérinaire" to Sorte.RDV, "Brunch" to Sorte.RDV, "Cours de guitare" to Sorte.RDV, "Cours de piano" to Sorte.RDV, "Cours de danse" to Sorte.RDV, "Cours d'anglais" to Sorte.RDV,
+        "Cours de natation" to Sorte.RDV, "Cours de cuisine" to Sorte.RDV, "Cours de yoga" to Sorte.RDV, "Cours de boxe" to Sorte.RDV, "Leçon de conduite" to Sorte.RDV, "Code de la route" to Sorte.RDV,
+        "Réunion" to Sorte.RDV, "Réunion de parents" to Sorte.RDV, "Réunion client" to Sorte.RDV, "Point avec le chef" to Sorte.RDV, "Entretien d'embauche" to Sorte.RDV, "Formation" to Sorte.RDV,
+        "Séminaire" to Sorte.RDV, "Conférence" to Sorte.RDV, "Visio avec l'équipe" to Sorte.RDV, "Réunion de copropriété" to Sorte.RDV, "Dermatologue" to Sorte.RDV, "Gynécologue" to Sorte.RDV,
+        "Cardiologue" to Sorte.RDV, "Orthodontiste" to Sorte.RDV, "Ophtalmologue" to Sorte.RDV, "Psychologue" to Sorte.RDV, "Prise de sang" to Sorte.RDV, "Radio du genou" to Sorte.RDV,
+        "Échographie" to Sorte.RDV, "Vaccin" to Sorte.RDV, "Orthophoniste" to Sorte.RDV, "Podologue" to Sorte.RDV, "Pharmacie" to Sorte.RDV, "Kiné du dos" to Sorte.RDV,
+        "Mécanicien" to Sorte.RDV, "Changer les pneus" to Sorte.RDV, "Vidange" to Sorte.RDV, "Lavage de la voiture" to Sorte.RDV, "Carrosserie" to Sorte.RDV, "Plombier" to Sorte.RDV,
+        "Électricien" to Sorte.RDV, "Livraison du canapé" to Sorte.RDV, "Déménagement" to Sorte.RDV, "Ramoneur" to Sorte.RDV, "Visite de l'appartement" to Sorte.RDV, "État des lieux" to Sorte.RDV,
+        "Mairie" to Sorte.RDV, "Préfecture" to Sorte.RDV, "Passeport" to Sorte.RDV, "Carte d'identité" to Sorte.RDV, "Impôts" to Sorte.RDV, "Assurance" to Sorte.RDV,
+        "Notaire" to Sorte.RDV, "Avocat" to Sorte.RDV, "Comptable" to Sorte.RDV, "Poste" to Sorte.RDV, "Retirer un colis" to Sorte.RDV, "Pressing" to Sorte.RDV,
+        "Cordonnier" to Sorte.RDV, "Opticien" to Sorte.RDV, "Anniversaire de Lucas" to Sorte.RDV, "Mariage de Sophie" to Sorte.RDV, "Baptême" to Sorte.RDV, "Fête des voisins" to Sorte.RDV,
+        "Barbecue chez Marc" to Sorte.RDV, "Pique-nique" to Sorte.RDV, "Crémaillère chez Inès" to Sorte.RDV, "Soirée jeux" to Sorte.RDV, "Soirée pizza" to Sorte.RDV, "Karaoké" to Sorte.RDV,
+        "Escape game" to Sorte.RDV, "Laser game" to Sorte.RDV, "Match de rugby" to Sorte.RDV, "Match de basket" to Sorte.RDV, "Match de hand" to Sorte.RDV, "Course à pied" to Sorte.RDV,
+        "Vélo" to Sorte.RDV, "Randonnée" to Sorte.RDV, "Escalade" to Sorte.RDV, "Musculation" to Sorte.RDV, "Salle de sport" to Sorte.RDV, "Ski" to Sorte.RDV,
+        "Patinoire" to Sorte.RDV, "Pétanque" to Sorte.RDV, "Golf" to Sorte.RDV, "Squash" to Sorte.RDV, "Zumba" to Sorte.RDV, "Pilates" to Sorte.RDV,
+        "Théâtre" to Sorte.RDV, "Opéra" to Sorte.RDV, "Musée" to Sorte.RDV, "Expo photo" to Sorte.RDV, "Cinéma avec les enfants" to Sorte.RDV, "Festival" to Sorte.RDV,
+        "Spectacle de danse" to Sorte.RDV, "Cirque" to Sorte.RDV, "Marché de Noël" to Sorte.RDV, "Brocante" to Sorte.RDV, "Vide-grenier" to Sorte.RDV, "Salon de l'auto" to Sorte.RDV,
+        "Zoo" to Sorte.RDV, "Parc d'attractions" to Sorte.RDV, "Coiffeur des enfants" to Sorte.RDV, "Barbier" to Sorte.RDV, "Manucure" to Sorte.RDV, "Esthéticienne" to Sorte.RDV,
+        "Massage" to Sorte.RDV, "Spa" to Sorte.RDV, "Tatouage" to Sorte.RDV, "Garderie" to Sorte.RDV, "Sortie scolaire" to Sorte.RDV, "Kermesse" to Sorte.RDV,
+        "Spectacle de l'école" to Sorte.RDV, "Rentrée des classes" to Sorte.RDV, "Conseil de classe" to Sorte.RDV, "Récupérer les enfants" to Sorte.RDV, "Nounou" to Sorte.RDV, "Babysitting" to Sorte.RDV,
+        "Anniversaire de Jade" to Sorte.RDV, "Appeler le plombier" to Sorte.RDV, "Appeler la banque" to Sorte.RDV, "Rappeler Julien" to Sorte.RDV, "Envoyer le dossier" to Sorte.RDV, "Payer la facture" to Sorte.RDV,
+        "Faire le plein" to Sorte.RDV, "Arroser les plantes" to Sorte.RDV, "Nourrir le chat" to Sorte.RDV, "Promener le chien" to Sorte.RDV, "Ménage" to Sorte.RDV, "Repassage" to Sorte.RDV,
+        "Lessive" to Sorte.RDV, "Jardinage" to Sorte.RDV, "Tondre la pelouse" to Sorte.RDV, "Vol pour Lisbonne" to Sorte.RDV, "Train pour Lyon" to Sorte.RDV, "Bus pour Strasbourg" to Sorte.RDV,
+        "Vacances en Bretagne" to Sorte.RDV, "Week-end à Paris" to Sorte.RDV, "Location de voiture" to Sorte.RDV, "Hôtel à Nice" to Sorte.RDV, "Camping" to Sorte.RDV, "Croisière" to Sorte.RDV,
+        "Session Minecraft" to Sorte.RDV, "Tournoi de Fortnite" to Sorte.RDV, "Partie d'échecs" to Sorte.RDV, "Jeu de rôle" to Sorte.RDV, "Soirée Warhammer" to Sorte.RDV, "Stream" to Sorte.RDV,
+        "LAN party" to Sorte.RDV, "Raid WoW" to Sorte.RDV, "Apéro avec les collègues" to Sorte.RDV, "Déjeuner avec maman" to Sorte.RDV, "Café avec Léo" to Sorte.RDV, "Resto japonais" to Sorte.RDV,
+        "Dîner aux chandelles" to Sorte.RDV, "Goûter chez mamie" to Sorte.RDV, "Repas de famille" to Sorte.RDV, "Afterwork" to Sorte.RDV, "Petit-déjeuner d'équipe" to Sorte.RDV)
+    private val gens = listOf("Max", "Inès", "Tom", "Julie", "Paul", "Hugo", "Sarah", "Lucas", "Chloé", "Maman", "Marc", "Emma", "Nathan", "Léna", "Yanis", "Camille",
+        "Papa", "Mamie", "Kevin", "Laura", "Mehdi", "Zoé", "Antoine", "Clara", "Romain", "Jade", "Bastien", "Manon")
+    private val lieux = listOf("12 rue des Lilas, Lyon", "stade de Woippy", "Metz", "Nancy", "Thionville", "salle B", "chez Max", "gymnase", "3 avenue Foch, Metz", "Strasbourg",
+        "Reims", "Épinal", "piscine municipale", "salle des fêtes", "8 rue Victor Hugo, Nancy", "centre commercial", "la mairie", "chez mamie", "bureau", "Luxembourg", "Sarreguemines")
     private val notesExistantes = listOf("Code de la porte 4521B", "Interphone : Martin", "2e étage, porte gauche", "Payer en liquide", "Parking derrière le bâtiment",
         "Rappeler pour confirmer", "Apporter 20 euros", "Code wifi : maison2024")
     private val choses = listOf("Carte Vitale", "Ordonnance", "Radios", "Crampons", "Maillot", "Lait", "Pain", "Œufs", "Chips", "Gâteau", "Dossier", "Chargeur")
@@ -119,7 +149,7 @@ class FabriqueEntrainementTest {
         val types = listOf("m_jour", "m_heure", "m_decal", "m_lieu", "m_pers", "m_retire", "m_chose", "m_important", "m_rappel", "m_titre", "m_note", "m_duree",
             "s_un", "s_fois", "s_mois", "s_arret", "f_un", "c_simple", "c_avec", "c_lieu", "c_liste", "c_repet", "c_mois", "c_anniv", "c_plusieurs", "c_rappel",
             "q_quand", "q_ou", "q_qui", "q_jour", "q_prendre", "n_rien", "d_double",
-            "c_important", "c_plage", "c_meme", "s_passe", "s_apres", "q_age", "q_note", "q_prochain", "m_note", "s_un", "c_simple", "s_passe", "s_passe", "q_age", "q_age")
+            "c_important", "c_plage", "c_meme", "s_passe", "s_apres", "q_age", "q_note", "q_prochain", "m_note", "s_un", "c_simple", "s_passe", "s_passe", "q_age", "q_age", "m_jourmois", "m_jourmois", "m_serie", "m_serie", "c_simple", "c_plage", "c_important", "c_repet")
         val type = types.random(rnd)
         fun choisir(l: List<RendezVous>) = l.randomOrNull(rnd)
         fun memeHeure(apres: List<RendezVous>, r: RendezVous, jour: LocalDate, heure: LocalTime) = apres.firstOrNull { it.id == r.id }?.let { it.quand.toLocalDate() == jour && it.quand.toLocalTime() == heure } == true
@@ -347,7 +377,7 @@ class FabriqueEntrainementTest {
                 val dit = if (d.isBefore(auj.plusDays(7))) jours[d.dayOfWeek.value - 1] else "le ${d.dayOfMonth} ${mois[d.monthValue - 1]}"
                 val h1 = LocalTime.of(8 + rnd.nextInt(10), listOf(0, 0, 30).random(rnd))
                 val h2 = h1.plusMinutes(listOf(60L, 90L, 120L, 180L).random(rnd))
-                val action = mutableMapOf<String, Any>("action" to "creer", "phrase" to "$t le ${d.dayOfMonth} ${mois[d.monthValue - 1]} " +
+                val action = mutableMapOf<String, Any>("action" to "creer", "phrase" to "$t $dit " +
                     if (type == "c_plage") "de ${h(h1)} à ${h(h2)}" else "à ${h(h1)}")
                 var desc = if (type == "c_meme") "créer un NOUVEAU « $t » $dit à ${h(h1)} (un autre que celui qui existe déjà)" else "créer « $t » $dit " + if (type == "c_plage") "de ${h(h1)} à ${h(h2)}" else "à ${h(h1)}"
                 val ind = mutableListOf(sansAccents(t).split(' ', '\'').first { it.length > 2 }, "${h1.hour}")
@@ -392,6 +422,24 @@ class FabriqueEntrainementTest {
                 val r = agenda.entre(n, n.plusDays(60)).firstOrNull() ?: return null
                 return Tache(type, "demander quel est son prochain rendez-vous", json(emptyList(), "Ton prochain rendez-vous : ${titreDe(r.rv)}, ${quandRV(r.rv, r.prochain, auj)}."),
                     listOf("prochain|suivant|apres|ensuite|arrive")) { a, _ -> a == ag }
+            }
+            "m_jourmois" -> {
+                val r = choisir(ag.filter { it.laRepetition?.type == "mois" }) ?: return null
+                val j = (1..28).filter { it != r.laRepetition?.jour }.random(rnd)
+                val heure = if (r.journee) "" else " à ${h(r.quand.toLocalTime())}"
+                return Tache(type, "dire que « ${titreDe(r)} » est désormais le $j de chaque mois (au lieu du ${r.laRepetition?.jour})",
+                    json(listOf(mapOf("action" to "modifier", "id" to code(r), "phrase" to "le $j de chaque mois$heure"))), listOf(cle(r.titre), "$j")) { a, _ ->
+                    a.firstOrNull { it.id == r.id }?.laRepetition?.let { it.type == "mois" && it.jour == j } == true && a.size == ag.size
+                }
+            }
+            "m_serie" -> {
+                val r = choisir(series.filter { !it.journee }) ?: return null
+                val j = DayOfWeek.entries.filter { it.value % 7 != r.laRepetition?.jour }.random(rnd)
+                val w = jours[j.value - 1]
+                return Tache(type, "dire que « ${titreDe(r)} » aura désormais lieu le $w, toutes les semaines (à la même heure)",
+                    json(listOf(mapOf("action" to "modifier", "id" to code(r), "phrase" to "tous les ${w}s à ${h(r.quand.toLocalTime())}"))), listOf(cle(r.titre), w)) { a, _ ->
+                    a.firstOrNull { it.id == r.id }?.let { x -> x.laRepetition?.type == "semaine" && x.laRepetition?.jour == j.value % 7 && x.quand.toLocalTime() == r.quand.toLocalTime() } == true && a.size == ag.size
+                }
             }
             "d_double" -> {
                 val r1 = choisir(horaire) ?: return null
