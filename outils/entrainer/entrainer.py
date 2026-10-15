@@ -5,6 +5,7 @@
 # Usage : python outils/entrainer/entrainer.py <exemples.jsonl> <modèle de base> <dossier de sortie> [époques] [rang LoRA]
 import json
 import math
+import os
 import random
 import sys
 import time
@@ -17,7 +18,7 @@ exemples_f, base, sortie = sys.argv[1], sys.argv[2], sys.argv[3]
 epoques = float(sys.argv[4]) if len(sys.argv) > 4 else 2
 rang = int(sys.argv[5]) if len(sys.argv) > 5 else 64
 LONGUEUR_MAX = 2048
-JETONS_PAR_LOT = 12288
+JETONS_PAR_LOT = int(os.environ.get("EVERMIND_JETONS", "12288"))
 torch.manual_seed(0)
 random.seed(0)
 

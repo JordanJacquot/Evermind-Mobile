@@ -149,7 +149,7 @@ class FabriqueEntrainementTest {
         val types = listOf("m_jour", "m_heure", "m_decal", "m_lieu", "m_pers", "m_retire", "m_chose", "m_important", "m_rappel", "m_titre", "m_note", "m_duree",
             "s_un", "s_fois", "s_mois", "s_arret", "f_un", "c_simple", "c_avec", "c_lieu", "c_liste", "c_repet", "c_mois", "c_anniv", "c_plusieurs", "c_rappel",
             "q_quand", "q_ou", "q_qui", "q_jour", "q_prendre", "n_rien", "d_double",
-            "c_important", "c_plage", "c_meme", "s_passe", "s_apres", "q_age", "q_note", "q_prochain", "m_note", "s_un", "c_simple", "s_passe", "s_passe", "q_age", "q_age", "m_jourmois", "m_jourmois", "m_serie", "m_serie", "c_simple", "c_plage", "c_important", "c_repet")
+            "c_important", "c_plage", "c_meme", "s_passe", "s_apres", "q_age", "q_note", "q_prochain", "m_note", "s_un", "c_simple", "s_passe", "s_passe", "q_age", "q_age", "m_jourmois", "m_jourmois", "m_serie", "m_serie", "c_simple", "c_plage", "c_important", "c_repet", "m_note2", "m_note2", "s_empeche", "s_empeche", "s_apres", "c_mois")
         val type = types.random(rnd)
         fun choisir(l: List<RendezVous>) = l.randomOrNull(rnd)
         fun memeHeure(apres: List<RendezVous>, r: RendezVous, jour: LocalDate, heure: LocalTime) = apres.firstOrNull { it.id == r.id }?.let { it.quand.toLocalDate() == jour && it.quand.toLocalTime() == heure } == true
@@ -315,13 +315,19 @@ class FabriqueEntrainementTest {
                 }
             }
             "c_mois" -> {
-                val (t, _) = listOf("Payer la cantine" to 1, "Payer l'électricité" to 1, "Virement épargne" to 1, "Payer la nounou" to 1).random(rnd)
+                val t = listOf("Payer la cantine", "Payer l'électricité", "Virement épargne", "Payer la nounou", "Facture d'électricité", "Facture de gaz",
+                    "Facture internet", "Payer le forfait téléphone", "Abonnement salle de sport", "Payer l'assurance auto", "Envoyer la facture au client",
+                    "Relevé de compteur", "Payer la mutuelle", "Virement à maman", "Payer le crédit", "Faire les comptes", "Changer les draps",
+                    "Payer la femme de ménage", "Cotisation du club", "Remplir la déclaration Urssaf", "Payer l'eau", "Recharger le pass Navigo",
+                    "Payer le loyer du garage", "Rendre le rapport mensuel", "Abonnement Netflix").random(rnd)
                 val dj = 1 + rnd.nextInt(28)
                 return Tache(type, "créer un rappel « $t » le $dj de chaque mois", json(listOf(mapOf("action" to "creer", "phrase" to "$t le $dj de chaque mois"))),
                     listOf(sansAccents(t).split(' ').last(), "$dj")) { a, _ -> a.filter { x -> ag.none { it.id == x.id } }.singleOrNull()?.laRepetition?.let { it.type == "mois" && it.jour == dj } == true }
             }
             "c_anniv" -> {
-                val p = listOf("Thomas", "Nathalie", "Kevin", "Camille", "Jules", "Manon").random(rnd)
+                val p = listOf("Thomas", "Nathalie", "Kevin", "Camille", "Jules", "Manon", "Élodie", "Yasmine", "Rémi", "Sophie", "Ahmed", "Lucie", "Bruno",
+                    "Océane", "Théo", "Inès", "Grégory", "Maëlys", "Noah", "Christine", "Pierre", "Anaïs", "Mathis", "Sylvie", "Karim", "Louise", "papa",
+                    "maman", "mamie", "papi", "ma sœur", "mon frère", "tonton Jean", "tata Marie").random(rnd)
                 val d = auj.plusDays((5 + rnd.nextInt(300)).toLong())
                 val age = 5 + rnd.nextInt(70)
                 return Tache(type, "créer l'anniversaire de $p le ${d.dayOfMonth} ${mois[d.monthValue - 1]}, qui aura $age ans",
@@ -331,7 +337,9 @@ class FabriqueEntrainementTest {
             "c_plusieurs" -> {
                 val d1 = auj.plusDays((5 + rnd.nextInt(60)).toLong())
                 val d2 = d1.plusDays((1 + rnd.nextInt(6)).toLong())
-                val t = listOf("Vacances", "Séminaire", "Salon", "Week-end à Annecy", "Formation").random(rnd)
+                val t = listOf("Vacances", "Séminaire", "Salon", "Week-end à Annecy", "Formation", "Vacances en Espagne", "Stage de foot", "Colonie des enfants",
+                    "Congés", "Voyage à Rome", "Camping", "Festival", "Déplacement à Lyon", "Séjour au ski", "Tournoi", "Mission à Bruxelles", "Week-end en amoureux",
+                    "Retraite yoga", "Hospitalisation", "Arrêt maladie").random(rnd)
                 val dit = if (d1.monthValue == d2.monthValue) "du ${d1.dayOfMonth} au ${d2.dayOfMonth} ${mois[d2.monthValue - 1]}" else "du ${d1.dayOfMonth} ${mois[d1.monthValue - 1]} au ${d2.dayOfMonth} ${mois[d2.monthValue - 1]}"
                 return Tache(type, "créer « $t » $dit", json(listOf(mapOf("action" to "creer", "phrase" to "$t $dit"))), listOf(sansAccents(t).split(' ').first(), "${d2.dayOfMonth}")) { a, _ ->
                     a.filter { x -> ag.none { it.id == x.id } }.singleOrNull()?.let { it.quand.toLocalDate() == d1 && it.fin?.toLocalDate() == d2 } == true
@@ -398,9 +406,14 @@ class FabriqueEntrainementTest {
             "s_apres" -> {
                 val r = choisir(series) ?: return null
                 val m = auj.plusMonths(1).monthValue
-                return Tache(type, "arrêter « ${titreDe(r)} » après ${mois[m - 1]} (plus aucun à partir de ${mois[m % 12]})",
-                    json(listOf(mapOf("action" to "supprimer", "id" to code(r), "periode" to "à partir de ${mois[m % 12]}"))),
-                    listOf(cle(r.titre), sansAccents(mois[m - 1]) + "|" + sansAccents(mois[m % 12]))) { a, _ -> a.firstOrNull { it.id == r.id }?.laRepetition?.jusqua != null }
+                val d1 = auj.plusMonths(1).withDayOfMonth(1)
+                return Tache(type, "arrêter « ${titreDe(r)} » après ${mois[m - 1]} (le dernier en ${mois[m - 1]}, plus aucun ensuite)",
+                    json(listOf(mapOf("action" to "supprimer", "id" to code(r), "periode" to "après ${mois[m - 1]}"))),
+                    listOf(cle(r.titre), sansAccents(mois[m - 1]))) { a, _ ->
+                    val ax = AgendaIA(a, n)
+                    a.any { it.id == r.id } && ax.entre(d1.atStartOfDay(), d1.plusMonths(1).atStartOfDay()).any { it.rv.id == r.id } &&
+                        ax.entre(d1.plusMonths(1).atStartOfDay(), d1.plusMonths(3).atStartOfDay()).none { it.rv.id == r.id }
+                }
             }
             "q_age" -> {
                 val r = choisir(ag.filter { it.naissance != null }) ?: return null
@@ -440,6 +453,19 @@ class FabriqueEntrainementTest {
                     json(listOf(mapOf("action" to "modifier", "id" to code(r), "phrase" to "tous les ${w}s à ${h(r.quand.toLocalTime())}"))), listOf(cle(r.titre), w)) { a, _ ->
                     a.firstOrNull { it.id == r.id }?.let { x -> x.laRepetition?.type == "semaine" && x.laRepetition?.jour == j.value % 7 && x.quand.toLocalTime() == r.quand.toLocalTime() } == true && a.size == ag.size
                 }
+            }
+            "m_note2" -> {
+                val r = choisir(tous.filter { it.sorte == Sorte.SANTE || it.sorte == Sorte.RDV }) ?: return null
+                val chose = listOf("un détartrage", "un devis", "une ordonnance pour mes lunettes", "un certificat médical", "le renouvellement de l'ordonnance",
+                    "un arrêt de travail", "une facture", "un rendez-vous de contrôle", "une radio", "le résultat des analyses", "un échéancier", "une attestation").random(rnd)
+                return Tache(type, "dire qu'au rendez-vous « ${titreDe(r)} » (${quand(r)}) il faudra demander $chose (une note, rien d'autre ne change)",
+                    json(listOf(mapOf("action" to "modifier", "id" to code(r), "notes" to "Demander $chose"))),
+                    listOf(cle(r.titre), sansAccents(chose).split(' ').last())) { a, _ -> a.first { it.id == r.id }.notes.contains(chose, true) && a.first { it.id == r.id }.quand == r.quand }
+            }
+            "s_empeche" -> {
+                val r = choisir(horaire) ?: return null
+                return Tache(type, "dire qu'on ne pourra pas aller à ${nom(r)} (il faut donc l'enlever de l'agenda)", json(listOf(mapOf("action" to "supprimer", "id" to code(r)))),
+                    listOf(cle(r.titre), "pourrai pas|peux pas|pourrais pas|serai pas|vais pas|irai pas|pas venir|pas aller|empeche|annul|supprim|enleve")) { a, _ -> a.none { it.id == r.id } && a.size == ag.size - 1 }
             }
             "d_double" -> {
                 val r1 = choisir(horaire) ?: return null
