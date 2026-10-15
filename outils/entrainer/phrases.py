@@ -68,8 +68,13 @@ en plus, demande moins, change d'autres détails, ou n'est pas vraiment une dema
 {liste}
 Réponds seulement en JSON : {{"ok": [true, false, ...]}} (une valeur par phrase, dans l'ordre)."""
 
-serveur = os.path.expandvars(r"%LOCALAPPDATA%\Evermind\voix\ia\llama-server.exe")
-modele = os.path.expandvars(r"%LOCALAPPDATA%\Evermind\voix\ia\Qwen3-4B-Instruct-2507-Q4_K_M.gguf")
+# Le dossier de l'IA d'Evermind PC : EVERMIND_IA, sinon son emplacement d'origine, sinon celui du dossier Mindset
+ia = next((d for d in [os.environ.get("EVERMIND_IA", ""), os.path.expandvars(r"%LOCALAPPDATA%\Evermind\voix\ia"), r"D:\Mindset\Donnees\Evermind\voix\ia"]
+           if d and os.path.exists(os.path.join(d, "llama-server.exe"))), None)
+if ia is None:
+    sys.exit("llama-server.exe d'Evermind PC introuvable : donne son dossier dans EVERMIND_IA")
+serveur = os.path.join(ia, "llama-server.exe")
+modele = os.path.join(ia, "Qwen3-4B-Instruct-2507-Q4_K_M.gguf")
 port = 8098
 schema = {"type": "object", "properties": {"phrases": {"type": "array", "items": {"type": "string"}}}, "required": ["phrases"]}
 schema_juge = {"type": "object", "properties": {"ok": {"type": "array", "items": {"type": "boolean"}}}, "required": ["ok"]}
