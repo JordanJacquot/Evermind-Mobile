@@ -38,7 +38,9 @@ import kotlin.math.abs
 class CatalogueAssistantTest {
     private val fr = Locale.FRENCH
     // (EVERMIND_MAINTENANT : rejouer des phrases écrites un autre jour, « le dentiste vendredi 16 »)
-    private val maintenant = (System.getenv("EVERMIND_MAINTENANT")?.let { LocalDateTime.parse(it) } ?: LocalDateTime.now()).withSecond(0).withNano(0)
+    // Un mercredi à 14 h, toujours le même : les lots (« cette semaine », « jeudi », « ce soir à 21 h ») ne dépendent ni du
+    // jour ni de l'heure où ils tournent. EVERMIND_MAINTENANT : un autre moment (pour des phrases écrites un autre jour).
+    private val maintenant = (System.getenv("EVERMIND_MAINTENANT")?.let { LocalDateTime.parse(it) } ?: LocalDateTime.of(2026, 10, 14, 14, 0)).withSecond(0).withNano(0)
     private val auj = maintenant.toLocalDate()
     private val dentiste = auj.plusDays(3)
     private val foot = auj.plusDays(4)
@@ -69,7 +71,8 @@ class CatalogueAssistantTest {
             rv("Soirée chez Max", Sorte.SORTIE, auj.plusDays(6).atTime(21, 0)).copy(avec = listOf("Max", "Inès", "Tom"), lien = "https://discord.gg/abc123"),
             rv("Foot", Sorte.SPORT, auj.plusDays(4).atTime(19, 0)),
             rv("Coiffeur", Sorte.RDV, n.minusDays(2)),
-        )
+        // (créés il y a un mois : « le dernier rendez-vous que j'ai ajouté » est celui ajouté pendant le test)
+        ).map { it.copy(cree = maintenant.minusDays(30)) }
     }
 
     /** Ce que la vérification d'un cas peut regarder : l'agenda obtenu et ce qu'Evermind a dit. */
@@ -119,7 +122,7 @@ class CatalogueAssistantTest {
         cas("créer", "Mets un rendez-vous chez le kiné le 1er ${nomMois(moisProchain)} à 8 h 45.") { jour(rv("*kin*").firstOrNull(), moisProchain, "08:45") },
         cas("créer", "Ajoute dentiste dans deux semaines à 15 h.") { val r = rv("*entiste*").filter { it.quand.toLocalDate() == auj.plusDays(14) }; r.size == 1 && r[0].quand.hour == 15 },
         cas("créer", "Programme une réunion demain de 14 h à 16 h.") { val r = rv("R*union*").firstOrNull(); jour(r, auj.plusDays(1), "14:00") && r!!.fin?.hour == 16 },
-        cas("créer", "Mets-moi un rappel dans deux heures pour sortir le linge.") { val r = rv("*linge*").firstOrNull(); r != null && abs(java.time.Duration.between(r.quand, LocalDateTime.now().plusHours(2)).toMinutes()) < 3 },
+        cas("créer", "Mets-moi un rappel dans deux heures pour sortir le linge.") { val r = rv("*linge*").firstOrNull(); r != null && abs(java.time.Duration.between(r.quand, maintenant.plusHours(2)).toMinutes()) < 3 },
         cas("créer", "Ajoute un rendez-vous chez le médecin le 3 mars à 10 h en $anSuivant.") { jour(rv("*decin*").firstOrNull(), LocalDate.of(anSuivant, 3, 3), "10:00") },
         cas("créer", "Crée un événement dentiste le 3 mars de l'année prochaine à 9 h.") { val r = rv("*entiste*").filter { it.quand.year == anSuivant }; r.size == 1 && r[0].quand.monthValue == 3 },
         cas("créer", "Ajoute un événement sans heure : faire le ménage samedi.") { jour(rv("*nage*").firstOrNull(), prochain(SAM), null) },
@@ -972,7 +975,8 @@ class CatalogueAssistantTest {
         cas("question", "Le foot est-il avant ou après le dentiste cette semaine ?") { taille == 8 && dit.startsWith("Dentiste") },
         cas("question", "Combien de raids il reste avant la fin de l'année ?") { taille == 8 && dit.contains(Regex("\\d")) },
         cas("suite", "Ajoute un apéro jeudi.", "Plutôt vers 19 h.", "Avec Paul et Julie.") { val r = rv("Ap*ro*").firstOrNull(); jour(r, prochain(JEU), "19:00") && r!!.avec.containsAll(listOf("Paul", "Julie")) },
-        cas("suite", "Qu'est-ce que j'ai samedi ?", "Mets-le à 18 h.") { jour(rv("Foot").firstOrNull(), foot, "18:00") },
+        // (le jour du foot, quel qu'il soit : le test ne dépend pas du jour où il tourne)
+        cas("suite", "Qu'est-ce que j'ai ${foot.format(java.time.format.DateTimeFormatter.ofPattern("EEEE", java.util.Locale.FRENCH))} ?", "Mets-le à 18 h.") { jour(rv("Foot").firstOrNull(), foot, "18:00") },
         cas("suite", "Crée un rendez-vous chez l'opticien.", "Le 5 novembre.", "À 10 h 30.") { jour(rv("*pticien*").firstOrNull(), le(5, 11), "10:30") },
         cas("suite", "Supprime le foot.", "Ah non attends, remets-le.") { rv("Foot").isNotEmpty() },
         cas("suite", "Mets le dentiste à 16 h.", "Et préviens-moi deux heures avant.") { val r = rv("Dentiste")[0]; r.quand.hour == 16 && r.rappels?.contains("m120") == true },

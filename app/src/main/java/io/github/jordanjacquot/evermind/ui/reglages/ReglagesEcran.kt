@@ -406,7 +406,6 @@ private fun SectionAssistant() {
                     }
                 }
                 val m = vise ?: conseille
-                m.avertissement?.let { Text("⚠ $it", style = MaterialTheme.typography.bodySmall, color = ev.theme.traduire(0xFFFFD84D), modifier = Modifier.padding(vertical = 6.dp)) }
                 val installe = Modeles.installe(app, m.pack)
                 if (installe && choisi == m) {
                     Text("✓ ${m.nom} est installé.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)

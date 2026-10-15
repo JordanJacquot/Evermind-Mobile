@@ -93,8 +93,8 @@ On s'arrête quand la série de contrôle dépasse 90 % deux nuits de suite.
 
 ## Étape 4 : la vraie vie (en parallèle)
 
-- **Tes phrases** : tu utilises l'app normalement. Un bouton « Ce n'est pas ce que je voulais » (prévu à l'étape 0)
-  garde la phrase et la réponse **sur le téléphone**, et tu les exportes quand tu veux. Rien ne part tout seul.
+- **Tes phrases** : tu utilises l'app normalement, et tu m'envoies directement celles qui ne marchent pas (la phrase
+  et ce qu'Evermind a répondu). Elles rejoignent une série « réelle », gardée dans le dépôt, mesurée à chaque tour.
 - **Les fautes de dictée** : la fabrique imite ce que Whisper produit vraiment (sans ponctuation, « à » et « a »
   confondus, nombres en lettres comme « dix-huit heures », noms mal écrits).
 - **Les conversations** : « ajoute tennis samedi », puis « à 10 h » ; « supprime le foot », puis « et le coiffeur
