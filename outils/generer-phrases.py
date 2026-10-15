@@ -1,7 +1,11 @@
 # Fait écrire par une IA (Qwen3 4B, le llama-server d'Evermind PC) des façons variées de demander des choses à Evermind,
 # pour tester l'assistant avec des phrases qu'aucun humain du projet n'a écrites. Chaque intention a un identifiant ;
 # la vérification de ce qui doit se passer est dans CatalogueAssistantTest (intentionsGenerees).
-# Usage : python outils/generer-phrases.py <sortie.jsonl> [graine] [nombre par intention] [base]
+# Usage : python outils/generer-phrases.py <sortie.jsonl> [graine] [nombre par intention] [base] [juge]
+#   « juge » : le 4B relit chaque phrase et écarte celles qui ne demandent pas exactement l'intention (fautes de la
+#   génération, pas phrases difficiles) dans <sortie>-ecartees.txt, sans qu'un humain lise la série (séries finales).
+#   python outils/generer-phrases.py <série.jsonl> rejuger [base] : seulement le juge, sur une série déjà écrite (la date
+#   de l'agenda doit être celle du jour où la série a été écrite)
 import datetime
 import json
 import os
@@ -10,9 +14,11 @@ import sys
 import time
 import urllib.request
 
+rejuger = "rejuger" in sys.argv[2:]
 sortie = sys.argv[1]
-graine = int(sys.argv[2]) if len(sys.argv) > 2 else 1
-par = int(sys.argv[3]) if len(sys.argv) > 3 else 5
+nombres = [int(x) for x in sys.argv[2:4] if x.isdigit()]
+graine = nombres[0] if nombres else 1
+par = nombres[1] if len(nombres) > 1 else 5
 
 JOURS = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
 auj = datetime.date.today()
@@ -99,7 +105,20 @@ Des phrases courtes et directes, comme on parle vraiment à son téléphone : un
 (« c'est quand le dentiste ? »), poli ou non, avec ou sans « s'il te plaît », parfois sans ponctuation comme une dictée.
 Pas de longues explications, pas d'hésitations. Les dates et heures doivent être les mêmes.
 Réponds seulement en JSON : {{"phrases": ["...", "..."]}}"""
-if len(sys.argv) > 4 and sys.argv[4] == "base":
+JUGE = """{agenda}
+
+L'intention voulue : {intention}.
+
+Voici des phrases qu'un utilisateur dit à son agenda. Pour chacune, dans l'ordre :
+1. « comprend » : écris en quelques mots ce qu'un humain comprendrait que la phrase demande (quelle action, sur quel
+   rendez-vous, avec quels détails : jour, heure, répétition, personnes, lieu...).
+2. « ok » : vrai seulement si c'est exactement l'intention voulue, avec tous ses détails. Faux s'il manque un détail
+   (par exemple « tous les mercredis » devenu un seul mercredi), si un détail est faux, si c'est une question au lieu
+   d'une demande (ou l'inverse), si elle vise un autre rendez-vous, ou si elle est incompréhensible. Une phrase
+   familière, courte, sans ponctuation ou avec une petite faute, mais claire, est vraie.
+{liste}
+Réponds seulement en JSON : {{"jugements": [{{"comprend": "...", "ok": true}}, ...]}} (un par phrase, dans l'ordre)."""
+if "base" in sys.argv[2:]:
     CONSIGNE = CONSIGNE_BASE
     INTENTIONS = {k: v for k, v in INTENTIONS.items() if k in BASE}
 
@@ -121,6 +140,35 @@ try:
         except Exception:
             time.sleep(0.5)
     schema = {"type": "object", "properties": {"phrases": {"type": "array", "items": {"type": "string"}}}, "required": ["phrases"]}
+    schema_juge = {"type": "object", "properties": {"jugements": {"type": "array", "items": {"type": "object", "properties": {
+        "comprend": {"type": "string"}, "ok": {"type": "boolean"}}, "required": ["comprend", "ok"]}}}, "required": ["jugements"]}
+
+    def juge(intention, phrases):
+        liste = "\n".join(f"{i + 1}. {ph}" for i, ph in enumerate(phrases))
+        corps = {
+            "messages": [{"role": "user", "content": JUGE.format(agenda=AGENDA, intention=intention, liste=liste)}],
+            "temperature": 0.0, "seed": 1, "max_tokens": 120 * len(phrases) + 100,
+            "response_format": {"type": "json_schema", "json_schema": {"name": "r", "schema": schema_juge}},
+        }
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/v1/chat/completions", json.dumps(corps).encode("utf-8"), {"Content-Type": "application/json"})
+        j = json.loads(json.load(urllib.request.urlopen(req, timeout=600))["choices"][0]["message"]["content"])["jugements"]
+        return [x["ok"] for x in j] + [False] * (len(phrases) - len(j))
+
+    # « rejuger » : seulement le juge, sur une série déjà écrite
+    if rejuger:
+        groupes = {}
+        for l in open(sortie, encoding="utf-8"):
+            if l.strip():
+                d = json.loads(l); groupes.setdefault(d["id"], []).append(d["phrase"])
+        ecartees = []
+        for ident, phrases in groupes.items():
+            ecartees += [ph for ph, v in zip(phrases, juge(INTENTIONS[ident], phrases)) if not v]
+        with open(os.path.splitext(sortie)[0] + "-ecartees.txt", "w", encoding="utf-8", newline="\n") as f:
+            f.write("".join(ph + "\n" for ph in ecartees))
+        print(sum(len(v) for v in groupes.values()), "phrases,", len(ecartees), "écartées par le juge")
+        sys.exit(0)
+    juger = "juge" in sys.argv[2:]
+    ecartees = []
     lignes = []
     for ident, intention in INTENTIONS.items():
         corps = {
@@ -131,12 +179,18 @@ try:
         req = urllib.request.Request(f"http://127.0.0.1:{port}/v1/chat/completions", json.dumps(corps).encode("utf-8"), {"Content-Type": "application/json"})
         rep = json.load(urllib.request.urlopen(req, timeout=300))
         phrases = json.loads(rep["choices"][0]["message"]["content"])["phrases"]
-        for ph in phrases[:par]:
-            lignes.append({"id": ident, "phrase": ph.strip()})
+        phrases = [ph.strip() for ph in phrases[:par] if ph.strip()]
+        if juger and phrases:
+            ecartees += [ph for ph, v in zip(phrases, juge(intention, phrases)) if not v]
+        for ph in phrases:
+            lignes.append({"id": ident, "phrase": ph})
         print(ident, len(phrases), file=sys.stderr)
     with open(sortie, "w", encoding="utf-8", newline="\n") as f:
         for l in lignes:
             f.write(json.dumps(l, ensure_ascii=False) + "\n")
-    print(len(lignes), "phrases")
+    if juger:
+        with open(os.path.splitext(sortie)[0] + "-ecartees.txt", "w", encoding="utf-8", newline="\n") as f:
+            f.write("".join(ph + "\n" for ph in ecartees))
+    print(len(lignes), "phrases" + (f", {len(ecartees)} écartées par le juge" if juger else ""))
 finally:
     p.terminate()

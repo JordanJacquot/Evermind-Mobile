@@ -1260,9 +1260,11 @@ class CatalogueAssistantTest {
         } finally {
             serveur?.close()
         }
-        echecs.forEach { println(it) }
+        // (EVERMIND_SCORE_SEUL : une série finale, dont on ne doit pas voir les échecs pour ne pas corriger dessus)
+        val details = if (System.getenv("EVERMIND_SCORE_SEUL") != null) emptyList() else echecs
+        details.forEach { println(it) }
         println("Phrases générées : $bons / $total (${ecartees.size} écartées)")
-        File("build/generees.txt").writeText((echecs + "Phrases générées : $bons / $total").joinToString("\n"))
+        File("build/generees.txt").writeText((details + "Phrases générées : $bons / $total").joinToString("\n"))
     }
 
     private val correcteur by lazy {

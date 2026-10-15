@@ -1,0 +1,14 @@
+# Les séries de test de l'assistant (docs/PLAN-1.0.md), lues par outils/mesurer.sh.
+# Chaque série : <nom>.jsonl (écrite par outils/generer-phrases.py) et <nom>-ecartees.txt (les phrases mal écrites par la
+# génération, triées avant toute mesure ; une phrase difficile mais claire n'est jamais écartée).
+#   type : base (les demandes de tous les jours) ou complexe (phrases longues et libres)
+#   rôle : diagnostic (on corrige en regardant), contrôle (mesurée avant toute retouche : le chiffre du tour),
+#          finale (jamais regardée : seulement son score, pour décider de la 1.0)
+#   moment : le jour où elle a été écrite (son agenda en dépend), à 14 h
+# nom             type      rôle        moment
+serie1            complexe  diagnostic  2026-10-13T14:00
+base1             base      diagnostic  2026-10-14T14:00
+base2             base      diagnostic  2026-10-14T14:00
+controle1-base    base      controle    2026-10-16T14:00
+finale-complexe   complexe  finale      2026-10-16T14:00
+finale-base       base      finale      2026-10-16T14:00

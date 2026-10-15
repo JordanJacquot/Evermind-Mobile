@@ -1,0 +1,216 @@
+{"id": "c1", "phrase": "crée un rendez-vous dentiste vendredi 10h30"}
+{"id": "c1", "phrase": "s'il te plaît ajoute un rendez-vous dentiste vendredi 10h30"}
+{"id": "c1", "phrase": "ajoute un rendez-vous chez le dentiste vendredi 10h30"}
+{"id": "c1", "phrase": "vendredi 10h30 chez le dentiste ?"}
+{"id": "c1", "phrase": "créer un rendez-vous dentiste vendredi 10h30"}
+{"id": "c1", "phrase": "dans deux jours 10h30 dentiste s'il te plaît"}
+{"id": "c1", "phrase": "nouveau rendez-vous dentiste vendredi 10h30"}
+{"id": "c1", "phrase": "ajoute le dentiste vendredi 10h30"}
+{"id": "c2", "phrase": "crée un dîner chez paul samedi à 20h avec julie"}
+{"id": "c2", "phrase": "dîner chez paul samedi 20h avec julie s'il te plaît"}
+{"id": "c2", "phrase": "ajoute dîner chez paul samedi 20h et julie"}
+{"id": "c2", "phrase": "veux-tu créer un dîner samedi 20h chez paul avec julie ?"}
+{"id": "c2", "phrase": "samedi 20h dîner chez paul avec julie"}
+{"id": "c2", "phrase": "ajoute un dîner samedi 20h avec julie et paul"}
+{"id": "c2", "phrase": "créer un repas chez paul samedi 20h et julie"}
+{"id": "c2", "phrase": "dîner samedi 20h chez paul avec julie oui"}
+{"id": "c3", "phrase": "crée un cours de guitare mercredi 18h"}
+{"id": "c3", "phrase": "mercredi 18h cours de guitare ?"}
+{"id": "c3", "phrase": "s'il te plaît ajoute cours de guitare mercredi 18h"}
+{"id": "c3", "phrase": "mercredi 18h guitare ? oui"}
+{"id": "c3", "phrase": "ajoute cours de guitare mercredi 18h"}
+{"id": "c3", "phrase": "cours guitare mercredi 18h s'il te plaît"}
+{"id": "c3", "phrase": "mercredi 18h je veux un cours de guitare"}
+{"id": "c3", "phrase": "crée un rendez-vous guitare mercredi 18h"}
+{"id": "c6", "phrase": "crée des courses samedi à 10 h avec lait pain œufs"}
+{"id": "c6", "phrase": "s'il te plaît ajoute des courses samedi 10 h lait pain œufs"}
+{"id": "c6", "phrase": "courses samedi 10 h lait pain œufs"}
+{"id": "c6", "phrase": "ajoute courses samedi 10 h : lait pain œufs"}
+{"id": "c6", "phrase": "faire des courses samedi 10 h avec lait pain œufs"}
+{"id": "c6", "phrase": "courses samedi 10 h : lait pain œufs s'il te plaît"}
+{"id": "c6", "phrase": "cree courses samedi 10h lait pain œufs"}
+{"id": "c6", "phrase": "des courses samedi à 10h lait pain œufs"}
+{"id": "c7", "phrase": "crée une réunion lundi 9h à 11h à metz"}
+{"id": "c7", "phrase": "lundi 9h à 11h à metz, nouvelle réunion"}
+{"id": "c7", "phrase": "s'il te plaît ajoute une réunion lundi 9h à 11h à metz"}
+{"id": "c7", "phrase": "créer réunion lundi 9h à 11h metz"}
+{"id": "c7", "phrase": "lundi 9h à 11h metz, ajouté"}
+{"id": "c7", "phrase": "ajoute une réunion lundi 9h à 11h à metz"}
+{"id": "c7", "phrase": "réunion lundi 9h à 11h à metz"}
+{"id": "c7", "phrase": "creer reunion lundi 9h 11h metz"}
+{"id": "c8", "phrase": "crée des vacances du 20 au 27 décembre"}
+{"id": "c8", "phrase": "vacances 20 au 27 dec s'il te plaît"}
+{"id": "c8", "phrase": "on fait des vacances du 20 au 27 dec"}
+{"id": "c8", "phrase": "met des vacances du 20 au 27"}
+{"id": "c8", "phrase": "vacances du 20 au 27 décembre oui"}
+{"id": "c8", "phrase": "je veux des vacances 20 à 27 dec"}
+{"id": "c8", "phrase": "s’il te plaît vacances 20-27 dec"}
+{"id": "c8", "phrase": "créer vacances 20 27 dec"}
+{"id": "c10", "phrase": "crée un footing demain à 7 h"}
+{"id": "c10", "phrase": "footing demain 7 h s'il te plaît"}
+{"id": "c10", "phrase": "jour demain 7 h footing"}
+{"id": "c10", "phrase": "ajoute footing demain 7 h"}
+{"id": "c10", "phrase": "voulais un footing demain 7 h"}
+{"id": "c10", "phrase": "demain 7 h footing oui"}
+{"id": "c10", "phrase": "créer footing demain 7 h"}
+{"id": "c10", "phrase": "footing demain 7h sans commentaire"}
+{"id": "m1", "phrase": "déplace le foot à dimanche 18 à 19 h"}
+{"id": "m1", "phrase": "le foot c'est dimanche 18 à 19 h ?"}
+{"id": "m1", "phrase": "supprime le foot et met le dimanche 18 à 19 h"}
+{"id": "m1", "phrase": "change le foot en dimanche 18 à 19 h"}
+{"id": "m1", "phrase": "foot dimanche 18 à 19 h s'il te plaît"}
+{"id": "m1", "phrase": "le foot doit être dimanche 18 à 19 h"}
+{"id": "m1", "phrase": "on met le foot dimanche 18 à 19 h"}
+{"id": "m1", "phrase": "reprogramme le foot dimanche 18 à 19 h"}
+{"id": "m3", "phrase": "mets le dentiste à 17 h"}
+{"id": "m3", "phrase": "change le dentiste à 17 h"}
+{"id": "m3", "phrase": "le dentiste c'est à 17 h"}
+{"id": "m3", "phrase": "s'il te plaît met le dentiste à 17 h"}
+{"id": "m3", "phrase": "dental à 17 h"}
+{"id": "m3", "phrase": "je veux le dentiste à 17 h"}
+{"id": "m3", "phrase": "dans la journée, dentiste à 17 h"}
+{"id": "m3", "phrase": "met à 17 h le rendez-vous dentiste"}
+{"id": "m4", "phrase": "dise le foot au stade de woippy"}
+{"id": "m4", "phrase": "le foot c'est au stade de woippy"}
+{"id": "m4", "phrase": "remplace le foot par stade de woippy"}
+{"id": "m4", "phrase": "le foot est au stade de woippy"}
+{"id": "m4", "phrase": "s'il te plaît met le foot au stade de woippy"}
+{"id": "m4", "phrase": "foot au stade de woippy s'il te plaît"}
+{"id": "m4", "phrase": "le foot se fait au stade de woippy"}
+{"id": "m4", "phrase": "stade de woippy pour le foot"}
+{"id": "m5", "phrase": "ajoute paul à la soirée chez max"}
+{"id": "m5", "phrase": "paul au dîner avec max"}
+{"id": "m5", "phrase": "on ajoute paul à 21h mardi"}
+{"id": "m5", "phrase": "mardi 20 à 21h avec max et paul"}
+{"id": "m5", "phrase": "paul au soirée max s'il te plaît"}
+{"id": "m5", "phrase": "ajouter paul à la soirée"}
+{"id": "m5", "phrase": "paul present chez max mardi"}
+{"id": "m5", "phrase": "s'il te plaît ajoute paul à 21h mardi"}
+{"id": "m8", "phrase": "marque le foot comme important"}
+{"id": "m8", "phrase": "le foot c'est important"}
+{"id": "m8", "phrase": "foot important s'il te plaît"}
+{"id": "m8", "phrase": "le foot doit être important"}
+{"id": "m8", "phrase": "marque le dimanche 18 à 19 h comme important"}
+{"id": "m8", "phrase": "foot dimanche 18 19h important"}
+{"id": "m8", "phrase": "s’il te plaît met foot en important"}
+{"id": "m8", "phrase": "le foot est important"}
+{"id": "m9", "phrase": "rappel la veille pour soirée chez max"}
+{"id": "m9", "phrase": "s'il te plaît rappel la veille pour mardi 20 soirée max"}
+{"id": "m9", "phrase": "rappel demain soir pour max"}
+{"id": "m9", "phrase": "je veux un rappel la veille pour max"}
+{"id": "m9", "phrase": "rappel la veille mardi 20 21h"}
+{"id": "m9", "phrase": "ajoute un rappel la veille pour max"}
+{"id": "m9", "phrase": "rappel la veille pour la soirée chez max"}
+{"id": "m9", "phrase": "rappel mardi 20 à 21h la veille s'il te plaît"}
+{"id": "m10", "phrase": "renomme le foot en match de foot"}
+{"id": "m10", "phrase": "le foot c'est un match de foot s'il te plaît"}
+{"id": "m10", "phrase": "on appelle foot match de foot"}
+{"id": "m10", "phrase": "changer foot en match de foot"}
+{"id": "m10", "phrase": "le foot devient match de foot"}
+{"id": "m10", "phrase": "s’il te plaît, dis foot match de foot"}
+{"id": "m10", "phrase": "match de foot au lieu de foot"}
+{"id": "m10", "phrase": "renomme foot par match de foot"}
+{"id": "s1", "phrase": "supprime le foot"}
+{"id": "s1", "phrase": "enleve le foot"}
+{"id": "s1", "phrase": "le foot, supprime"}
+{"id": "s1", "phrase": "le dimanche 18 à 19h, supprime"}
+{"id": "s1", "phrase": "c'est le foot ? oui, supprime"}
+{"id": "s1", "phrase": "s'il te plaît, supprime le foot"}
+{"id": "s1", "phrase": "supprime le match de foot"}
+{"id": "s1", "phrase": "le foot dimanche 18, efface"}
+{"id": "s3", "phrase": "supprime le raid demain"}
+{"id": "s3", "phrase": "enlève le raid jeudi"}
+{"id": "s3", "phrase": "le raid jeudi 21h30 s’il te plaît"}
+{"id": "s3", "phrase": "supprime seulement le raid de demain"}
+{"id": "s3", "phrase": "c’est le raid qui doit disparaître"}
+{"id": "s3", "phrase": "supprime le raid samedi 17"}
+{"id": "s3", "phrase": "pas le raid demain"}
+{"id": "s3", "phrase": "enleve le raid de jeudi 21h30"}
+{"id": "s6", "phrase": "supprime tout pour demain"}
+{"id": "s6", "phrase": "supprime le foot dimanche"}
+{"id": "s6", "phrase": "enlève l'anniversaire de léa"}
+{"id": "s6", "phrase": "supprime la soirée chez max"}
+{"id": "s6", "phrase": "c'est quoi prévu demain ? supprime tout"}
+{"id": "s6", "phrase": "s'il te plaît supprime tout demain"}
+{"id": "s6", "phrase": "efface le foot et l'anniversaire"}
+{"id": "s6", "phrase": "demain tout est à effacer"}
+{"id": "s7", "phrase": "annule la soirée chez max"}
+{"id": "s7", "phrase": "supprime la soirée mardi 20"}
+{"id": "s7", "phrase": "la soirée chez max elle est annulée"}
+{"id": "s7", "phrase": "on annule la soirée 20 mars 21h"}
+{"id": "s7", "phrase": "c'est pas possible de voir max ce soir"}
+{"id": "s7", "phrase": "pas besoin de voir max mardi 20"}
+{"id": "s7", "phrase": "on annule max demain 21h"}
+{"id": "s7", "phrase": "s’il te plaît annule la soirée chez max"}
+{"id": "f1", "phrase": "le loyer est payé"}
+{"id": "f1", "phrase": "s'il te plaît, le loyer est payé"}
+{"id": "f1", "phrase": "le loyer est payé s'il te plaît"}
+{"id": "f1", "phrase": "payé le loyer"}
+{"id": "f1", "phrase": "le loyer est payé aujourd'hui"}
+{"id": "f1", "phrase": "j'ai payé le loyer"}
+{"id": "f1", "phrase": "le loyer est payé le 19"}
+{"id": "f1", "phrase": "le loyer est payé le 19 du mois"}
+{"id": "f2", "phrase": "maman a été appelée"}
+{"id": "f2", "phrase": "j'ai appelé maman"}
+{"id": "f2", "phrase": "on a appelé maman"}
+{"id": "f2", "phrase": "maman a été appelée aujourd'hui"}
+{"id": "f2", "phrase": "appel à maman fait"}
+{"id": "f2", "phrase": "maman appelée oui"}
+{"id": "f2", "phrase": "c'est bon j'ai appelé maman"}
+{"id": "f2", "phrase": "maman a été appelée s'il te plaît"}
+{"id": "q1", "phrase": "Qu'est-ce qui est prévu demain ?"}
+{"id": "q1", "phrase": "C'est quoi demain ?"}
+{"id": "q1", "phrase": "Demain ? Qu'est-ce qu'il y a ?"}
+{"id": "q1", "phrase": "Qu'est-ce que j'ai à faire demain ?"}
+{"id": "q1", "phrase": "Demain, j'ai quoi ?"}
+{"id": "q1", "phrase": "Quand est le dentiste ?"}
+{"id": "q1", "phrase": "Demain, j'ai l'anniversaire de Léa ?"}
+{"id": "q1", "phrase": "J'ai l'anniversaire demain ?"}
+{"id": "q2", "phrase": "c'est quand le dentiste ?"}
+{"id": "q2", "phrase": "quand est le dentiste ?"}
+{"id": "q2", "phrase": "le dentiste, c'est quand ?"}
+{"id": "q2", "phrase": "dents, samedi 17 à 15h ?"}
+{"id": "q2", "phrase": "dentiste samedi 17 ?"}
+{"id": "q2", "phrase": "dentiste samedi 17 15h ?"}
+{"id": "q2", "phrase": "samedi 17 15h, c'est ça ?"}
+{"id": "q2", "phrase": "dents samedi 17 15h 30 ?"}
+{"id": "q3", "phrase": "où est le dentiste ?"}
+{"id": "q3", "phrase": "c'est où le dentiste ?"}
+{"id": "q3", "phrase": "adresse du dentiste samedi 17 ?"}
+{"id": "q3", "phrase": "doucement, où est le dentiste ?"}
+{"id": "q3", "phrase": "s'il te plaît, donne moi l'adresse du dentiste"}
+{"id": "q3", "phrase": "le dentiste, où c'est ?"}
+{"id": "q3", "phrase": "adresse dentiste 12 rue des lilas ?"}
+{"id": "q3", "phrase": "dans la rue des lilas, où c'est ?"}
+{"id": "q4", "phrase": "qui vient à la soirée chez max ?"}
+{"id": "q4", "phrase": "c'est qui au party max ?"}
+{"id": "q4", "phrase": "max avec qui cette soir ?"}
+{"id": "q4", "phrase": "chez max, qui est là ?"}
+{"id": "q4", "phrase": "pour la soirée max, qui vient ?"}
+{"id": "q4", "phrase": "max, qui est avec toi ?"}
+{"id": "q4", "phrase": "qui vient chez max mardi 20 ?"}
+{"id": "q4", "phrase": "c'est qui au soir de max ?"}
+{"id": "q6", "phrase": "qu'est-ce qu'on apporte au dentiste ?"}
+{"id": "q6", "phrase": "j'ai besoin de la carte vitale et de l'ordonnance pour le dentiste"}
+{"id": "q6", "phrase": "s'il te plaît, dis-moi ce qu'on doit apporter chez le dentiste"}
+{"id": "q6", "phrase": "code de la porte 4521B, c'est pour le dentiste ?"}
+{"id": "q6", "phrase": "apporter carte vitale et ordonnance samedi 17 à 15h"}
+{"id": "q6", "phrase": "dans deux heures, on va au dentiste, qu'est-ce qu'on apporte ?"}
+{"id": "q6", "phrase": "c'est quoi le truc à prendre au dentiste ?"}
+{"id": "q6", "phrase": "samedi 17 15h au dentiste : carte vitale et ordonnance"}
+{"id": "q8", "phrase": "quand est le prochain rendez-vous ?"}
+{"id": "q8", "phrase": "c'est quand le raid ?"}
+{"id": "q8", "phrase": "le prochain rendez-vous c'est quand ?"}
+{"id": "q8", "phrase": "dans deux heures c'est quoi ?"}
+{"id": "q8", "phrase": "le prochain rendez-vous c'est demain ?"}
+{"id": "q8", "phrase": "quand est le raid avec les potes ?"}
+{"id": "q8", "phrase": "le prochain est le raid ?"}
+{"id": "q8", "phrase": "c'est quand le rendez-vous avec les potes ?"}
+{"id": "n3", "phrase": "salut evermind merci"}
+{"id": "n3", "phrase": "bonjour evermind merci"}
+{"id": "n3", "phrase": "salut evermind je t apprécie"}
+{"id": "n3", "phrase": "merci evermind"}
+{"id": "n3", "phrase": "salut evermind c'était bien"}
+{"id": "n3", "phrase": "je te remercie evermind"}
+{"id": "n3", "phrase": "evermind salut merci"}
+{"id": "n3", "phrase": "merci pour tout evermind"}

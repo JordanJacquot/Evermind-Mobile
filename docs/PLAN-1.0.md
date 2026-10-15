@@ -23,8 +23,9 @@ Précisions :
   est écartée, avec la raison notée. Les phrases difficiles mais claires restent.
 - **Tout se mesure comme dans l'app** : les règles d'abord, puis le modèle.
 
-Où on en est (16 octobre) : base 95 à 97 % (séries base1 et base2), lots 873/874 ; complexe 75 % (série 1, qui sert
-maintenant au diagnostic, donc n'est plus une mesure à l'aveugle).
+Où on en est (16 octobre, modèle `assistant-v1`, comme dans l'app) : lots 874/874 ; série de contrôle base 89 % ;
+**séries finales : base 87 %, complexe 71 %**. Le modèle seul fait mieux que l'app sur les phrases complexes (81 %) :
+les règles, sûres d'elles mais fausses, lui coupent la parole (voir l'étape 2 bis).
 
 ## Les séries de test : trois niveaux, pour ne pas se mentir
 
@@ -37,7 +38,14 @@ maintenant au diagnostic, donc n'est plus une mesure à l'aveugle).
    1.0. Avec tes vraies phrases, elles décident de la sortie.
 
 Les séries sont écrites par le Qwen3 4B du PC, avec d'autres consignes et d'autres agendas que les exemples
-d'entraînement, pour que le modèle ne soit pas jugé sur ce qu'il a appris par cœur.
+d'entraînement, pour que le modèle ne soit pas jugé sur ce qu'il a appris par cœur. Elles sont dans
+`outils/phrases-generees/` (index : `series.txt`), et mesurées par `bash outils/mesurer.sh [modèle.gguf] [tour]`, qui
+ajoute ses chiffres à `docs/MESURES.md`.
+
+Le tri des phrases mal écrites par la génération (une phrase fausse, comme « dimanche 20 » quand le dimanche est le 25)
+est fait une seule fois, avant toute mesure, en ne jugeant que la phrase. Le juge automatique du 4B
+(`generer-phrases.py ... juge`) s'est montré trop peu fiable (il écarte « j'ai payé le loyer », garde « diz le foot
+au stade »). Pour les séries finales, le banc n'écrit que le score, nulle part le détail des échecs.
 
 ## Étape 0 : préparer (de jour, sans charger le PC)
 
@@ -72,6 +80,17 @@ avant… », la liste des rendez-vous d'une journée. Il répond aujourd'hui ave
 - **Les dates telles que l'utilisateur les dit** : le modèle recopie « jeudi », « le 12 », « après décembre », et
   c'est Evermind qui calcule la date.
 - La fabrique et la vérification suivent : chaque exemple de question est vérifié par la réponse qu'Evermind en tire.
+
+## Étape 2 bis : qui répond, les règles ou le modèle (de jour)
+
+Sur les séries neuves, le modèle seul bat l'app sur les phrases complexes (81 % contre 71 %) et fait jeu égal sur la
+base : les règles répondent d'abord, et quand elles se trompent sans s'en douter, le modèle ne parle pas.
+
+- Les règles gardent la main sur ce qu'elles reconnaissent à coup sûr (une phrase courte, un seul verbe, un
+  rendez-vous nommé : les ordres de base).
+- Sur une phrase longue ou à plusieurs morceaux, le modèle répond, et les règles le vérifient (les contrôles qui
+  existent déjà : titre venu de la phrase, rien de supprimé sans être nommé).
+- Chaque réglage se mesure sur la série de contrôle, jamais sur les finales.
 
 ## Étape 3 : la boucle sur les erreurs (nuits 2 à 5)
 
@@ -122,7 +141,7 @@ On s'arrête quand la série de contrôle dépasse 90 % deux nuits de suite.
 
 | Quand | Quoi |
 |---|---|
-| Jour 1 | Étape 0, et étape 2 (l'action « question ») |
+| Jour 1 | Étape 0 (faite le 16 octobre), étape 2 (l'action « question ») et 2 bis (qui répond) |
 | Nuit 1 | Étape 1 : premier entraînement sur des exemples propres |
 | Jours et nuits 2 à 5 | Étape 3, la boucle ; étape 4 avec tes phrases |
 | Ensuite | Étape 5, puis la 1.0 |
