@@ -6,7 +6,7 @@
 # Usage (Git Bash, depuis n'importe où) : bash outils/mesurer.sh [modèle.gguf] [nom du tour]
 #   sans modèle : les règles seules
 #   MESURER_FINALE=1 : aussi les séries finales (leur score seulement, jamais le détail des échecs)
-#   MESURER_LOTS=0 : sans les 18 lots (plus rapide)
+#   MESURER_LOTS=0 : sans les 18 lots (plus rapide) ; MESURER_SERIES=0 : seulement les lots ; MESURER_NOTER=0 : un essai, rien d'ajouté à docs/MESURES.md
 #   EVERMIND_IA : le dossier de llama-server.exe (celui d'Evermind PC)
 set -u
 cd "$(dirname "$0")/.."
@@ -30,22 +30,36 @@ lancer() { ./gradlew testDebugUnitTest --tests "$1" --rerun --console=plain -q >
 
 lignes=()
 
-# --- Les 18 lots écrits à la main (règles seules)
+# --- Les 18 lots écrits à la main : les règles seules, et comme dans l'app quand un modèle est donné
 if [ "${MESURER_LOTS:-1}" != "0" ]; then
-    n=0; t=0
-    for c in tour8 tour7 tour6 mesure tour5 tour4 tour3 couverture couverture-verif complexe complexe-verif pc examen contre-examen bases bases-verif quotidien quotidien-verif; do
-        rm -f app/build/catalogue-assistant.txt
-        EVERMIND_SANS_IA=1 EVERMIND_SANS_CONTROLE=1 EVERMIND_CATALOGUE=$c lancer '*CatalogueAssistantTest*'
-        cp app/build/catalogue-assistant.txt "$DETAILS/lot-$c.txt" 2>/dev/null || echo "PLANTÉ : 0 / 1" > "$DETAILS/lot-$c.txt"
-        read -r a b <<< "$(score "$DETAILS/lot-$c.txt")"
-        n=$((n + ${a:-0})); t=$((t + ${b:-1}))
+    res=()
+    for mode in regles app; do
+        if [ "$mode" = "app" ] && [ -z "$MODELE" ]; then res+=("—"); continue; fi
+        n=0; t=0
+        for c in tour8 tour7 tour6 mesure tour5 tour4 tour3 couverture couverture-verif complexe complexe-verif pc examen contre-examen bases bases-verif quotidien quotidien-verif; do
+            rm -f app/build/catalogue-assistant.txt
+            (
+                export EVERMIND_CATALOGUE=$c
+                if [ "$mode" = "regles" ]; then
+                    export EVERMIND_SANS_IA=1 EVERMIND_SANS_CONTROLE=1
+                else
+                    export EVERMIND_LLAMA_SERVEUR="$IA/llama-server.exe" EVERMIND_LLAMA_MODELE="$MODELE" EVERMIND_CONSIGNES=courtes
+                    export LLAMA_ARG_CHAT_TEMPLATE_KWARGS='{"enable_thinking":false}'
+                fi
+                lancer '*CatalogueAssistantTest*'
+            )
+            cp app/build/catalogue-assistant.txt "$DETAILS/lot-$c-$mode.txt" 2>/dev/null || echo "PLANTÉ : 0 / 1" > "$DETAILS/lot-$c-$mode.txt"
+            read -r a b <<< "$(score "$DETAILS/lot-$c-$mode.txt")"
+            n=$((n + ${a:-0})); t=$((t + ${b:-1}))
+        done
+        res+=("$n / $t ($(pourcent $n $t))")
     done
-    echo "Lots écrits à la main (règles) : $n / $t"
-    lignes+=("| $TOUR | lots écrits à la main | base | — | $n / $t ($(pourcent $n $t)) | — | — |")
+    echo "Lots écrits à la main : règles ${res[0]} · app ${res[1]}"
+    lignes+=("| $TOUR | lots écrits à la main | base | — | ${res[0]} | — | ${res[1]} |")
 fi
 
 # --- Les séries
-while read -r nom type role moment; do
+while [ "${MESURER_SERIES:-1}" != "0" ] && read -r nom type role moment; do
     [ -z "$nom" ] || [ "${nom:0:1}" = "#" ] && continue
     [ "$role" = "finale" ] && [ "${MESURER_FINALE:-0}" != "1" ] && continue
     res=()
@@ -86,5 +100,9 @@ Une ligne par série, à chaque tour (`bash outils/mesurer.sh [modèle.gguf] [no
 |---|---|---|---|---|---|---|
 FIN
 fi
-printf '%s\n' "${lignes[@]}" >> docs/MESURES.md
-echo "Ajouté à docs/MESURES.md ; détails dans $DETAILS"
+if [ "${MESURER_NOTER:-1}" = "1" ]; then
+    printf '%s\n' "${lignes[@]}" >> docs/MESURES.md
+    echo "Ajouté à docs/MESURES.md ; détails dans $DETAILS"
+else
+    echo "(essai : rien d'ajouté à docs/MESURES.md) ; détails dans $DETAILS"
+fi

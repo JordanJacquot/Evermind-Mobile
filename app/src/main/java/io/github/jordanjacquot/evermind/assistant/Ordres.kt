@@ -181,6 +181,14 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         if (!recente) memoire.oublier()
 
         discussion(s)?.let { return ReponseIA(emptyList(), it) }
+        // « Supprime rien du tout », « n'efface rien » : surtout ne rien toucher
+        if (s.contient("^(?:ne\\s+|n')?(?:supprim|efface|enleve|annule|retire|vire|touche)\\w*\\s+(?:rien|personne|aucun)\\b")) return ReponseIA(emptyList(), "D'accord, je ne touche à rien.")
+        // « Mon dentiste s'appelle docteur Martin » : un renseignement sur le rendez-vous (une note), pas un nouveau nom
+        trouve(t, "^(?:[Mm]on|[Mm]a|[Ll]e|[Ll]a|[Mm]es)\\s+(?<x>[\\p{L}'-]+(?:\\s+[\\p{L}'-]+)?)\\s+s'appellen?t?\\s+(?<n>[^.!?]+?)\\s*[.!]?$").takeIf { it.ok }?.let { x ->
+            chercher(mots(net(x.g("x")!!))).singleOrNull()?.let { c ->
+                return ReponseIA(listOf(ActionIA("modifier", notes = majuscule(x.g("n")!!.trim())).apply { cible = c.rv; sure = true }), "")
+            }
+        }
         // « Je pensais supprimer le foot, mais finalement non » : une idée abandonnée, rien à faire
         if (s.contient("\\b(?:mais|et)\\s+(?:finalement|en fait|au final|bon)\\s+non\\b\\s*[.!]*$|^(?:je pensais|j'allais|je voulais|j'avais pense a|j'hesite a|j'hesitais a)\\b.*\\bmais\\b")) {
             return ReponseIA(emptyList(), "D'accord, je ne touche à rien.")

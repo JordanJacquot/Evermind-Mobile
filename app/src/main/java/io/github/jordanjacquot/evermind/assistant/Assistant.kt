@@ -69,6 +69,19 @@ class Assistant(
             val d = "C'est noté : le poste ${PostesNoms[reglage.first]}, c'est maintenant de ${reglage.second}."
             return Resultat(d, d, null, false) to rendezVous
         }
+        // Une phrase longue et parlée (« euh du coup je voudrais qu'on me rappelle le jour avant la soirée chez max... ») :
+        // le modèle entraîné la comprend mieux que les règles, il répond d'abord ; sa réponse passe les mêmes contrôles, et
+        // s'il échoue, les règles reprennent la main. Les ordres courts, et les phrases construites que les règles
+        // maîtrisent (la veille de, deux actions, une liste...), restent aux règles (docs/MESURES.md, étape 2 bis).
+        if (regles && controle() && moteur != null && pourLeModele(texte)) {
+            val avantM = memoire.copie()
+            val avantA = annulations.toList()
+            val parIA = runCatching { demanderIA(texte, rendezVous, maintenant) }.getOrNull()
+            if (parIA != null && doute(texte, null, parIA.first, rendezVous, parIA.second) == null && douteIA(texte, rendezVous, parIA.second, false) == null) return parIA
+            if (System.getenv("EVERMIND_TRACE") != null) println("LONGUE « $texte » : les règles reprennent")
+            memoire.reprendre(avantM)
+            annulations.clear(); annulations += avantA
+        }
         val agenda = AgendaIA(rendezVous, maintenant)
         // D'abord les règles d'Evermind : immédiat, et toujours la même chose pour la même phrase
         // (une erreur dans les règles ne doit jamais faire planter l'app : la phrase est alors « pas comprise »)
@@ -108,6 +121,22 @@ class Assistant(
             return null
         }
         return parIA
+    }
+
+    /**
+     * Une phrase pour le modèle d'abord : longue (plus de 10 mots, sans « euh », « du coup », « s'il te plaît »), parlée
+     * (« euh », « du coup », « je voudrais », « tu pourrais »...), et sans ce que les règles font mieux que lui : une
+     * date relative (la veille, deux jours avant, le deuxième mardi), plusieurs actions, une liste, une hypothèse.
+     */
+    private fun pourLeModele(texte: String): Boolean {
+        val n = sansAccents(texte.lowercase().replace('’', '\''))
+        val utiles = n.replace(Regex("\\b(?:euh|bon|du coup|alors|s'il te plait|s'il vous plait|stp|svp)\\b"), " ")
+        if (Regex("[\\p{L}\\d']+").findAll(utiles).count() <= 10) return false
+        if (!n.contient("\\b(?:euh|du coup|je voudrais|j'aimerais|je veux|tu pourrais|je pense|il faudrait|faudrait|faut que|parce que|je te demande|je me dis|genre|bon|alors|oui|ah)\\b")) return false
+        val verbe = "(?:mets|met|ajoute|rajoute|supprime|efface|decale|deplace|rappelle|previens|marque|annule|enleve)"
+        return !n.contient("\\b(?:la veille|le lendemain|avant|apres|meme jour|premier|premiere|deuxieme|troisieme|dernier|derniere|" +
+            "dans (?:\\d+|deux|trois|quatre|une|un) (?:semaines?|jours?|mois|heures?)|plus tot|plus tard|si je|si on|sauf|puis|ensuite|non,|en fait,|plutot)\\b|" +
+            ",\\s*(?:et\\s+)?$verbe\\b|\\bet\\s+$verbe\\b|:")
     }
 
     /**

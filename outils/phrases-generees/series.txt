@@ -10,5 +10,6 @@ serie1            complexe  diagnostic  2026-10-13T14:00
 base1             base      diagnostic  2026-10-14T14:00
 base2             base      diagnostic  2026-10-14T14:00
 controle1-base    base      controle    2026-10-16T14:00
+controle1-complexe complexe controle    2026-10-16T14:00
 finale-complexe   complexe  finale      2026-10-16T14:00
 finale-base       base      finale      2026-10-16T14:00

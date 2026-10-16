@@ -146,9 +146,9 @@ code et les règles, de jour. Un tour de nuit : `bash outils/entrainer/tour.sh <
 
 | Quand | Quoi |
 |---|---|
-| Jour 1 (16 octobre) | Étape 0, faite |
-| Nuit 1 (du 16 au 17) | Étape 1 : premier tour sur des exemples entièrement neufs (`nuit1`) |
-| Jour 2 | Étapes 2 (l'action « question ») et 2 bis (qui répond), d'après les mesures de la nuit 1 |
+| Jour 1 (15 octobre) | Étape 0, faite |
+| Nuit 1 (du 15 au 16) | Étape 1 : premier tour sur des exemples entièrement neufs (`nuit1`) |
+| Jour 2 (16 octobre) | Étapes 2 (l'action « question ») et 2 bis (qui répond), d'après les mesures de la nuit 1 |
 | Nuit 2 | Un tour avec l'action « question » dans la fabrique |
 | Jours et nuits 3 à 6 | Étape 3, la boucle ; étape 4 avec tes phrases |
 | Ensuite | Étape 5, puis la 1.0 |
