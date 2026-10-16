@@ -29,6 +29,8 @@ class ActionIA(
     var retirerPersonnes: List<String> = emptyList(),
     var dossiers: List<String> = emptyList(),
     var ouvrirAuDebut: Boolean? = null,
+    /** Pour l'action « question » : ce qui est demandé (« quand », « ou », « qui », « age », « notes », « prendre »...). */
+    var sujet: String? = null,
 ) {
     /** Le rendez-vous visé, choisi par Evermind (suppression de toute une période). */
     var cible: RendezVous? = null
@@ -69,6 +71,7 @@ class ActionIA(
         if (retirerPersonnes.isNotEmpty()) put("retirer_personnes", liste(retirerPersonnes))
         if (dossiers.isNotEmpty()) put("dossiers", liste(dossiers))
         ouvrirAuDebut?.let { put("ouvrir_au_debut", it) }
+        sujet?.let { put("sujet", it) }
     }
 
     private fun liste(l: List<String>) = buildJsonArray { l.forEach { add(JsonPrimitive(it)) } }
@@ -100,6 +103,7 @@ class ReponseIA(val actions: List<ActionIA>, val reponse: String) {
                     personnes = a.liste("personnes"), notes = a.texte("notes"), chosesAPrendre = a.liste("choses_a_prendre"),
                     important = a.oui("important"), periode = a.texte("periode"), rappels = a.liste("rappels"),
                     retirerPersonnes = a.liste("retirer_personnes"), dossiers = a.liste("dossiers"), ouvrirAuDebut = a.oui("ouvrir_au_debut"),
+                    sujet = a.texte("sujet"),
                 )
             }
             return ReponseIA(actions, o.texte("reponse") ?: "")

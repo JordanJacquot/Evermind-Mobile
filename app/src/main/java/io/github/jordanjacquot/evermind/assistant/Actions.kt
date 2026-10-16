@@ -77,7 +77,8 @@ class Actions(
         if (modifies.isNotEmpty()) actions = actions.filter { !(it.action == "supprimer" && it.code() in modifies) }
         // « supprime mes rendez-vous de la semaine prochaine » : Evermind trouve lui-même tout ce qui tombe dans la période
         if (actions.none { it.sure }) suppressionsPeriode(texte, agenda)?.let { actions = it }
-        val change = actions.any { it.action != "annuler" }
+        // (une question ne change rien à l'agenda)
+        val change = actions.any { it.action != "annuler" && it.action != "question" }
         if (change) sauverAnnulation()
         val inn = intentions(texte)
         // Beaucoup de suppressions d'un coup (« supprime tout ») : une seule phrase pour toutes
@@ -115,6 +116,17 @@ class Actions(
                 a.action == "annuler" -> {
                     if (annuler()) { dits += "J'ai annulé ma dernière action."; ecrits += "Dernière action annulée." }
                     else { dits += "Il n'y a rien à annuler."; ecrits += "Rien à annuler." }
+                }
+                a.action == "question" -> {
+                    // Le modèle dit ce qui est demandé et sur quoi ; la réponse est calculée par les règles (même s'il
+                    // en a écrit une)
+                    // (une période sans code : la question porte sur la période, pas sur un rendez-vous nommé)
+                    val r = if (a.periode != null && a.code() == null) null else rv
+                    val dit = Ordres(agenda, MemoireOrdres()).repondre(a.sujet ?: "quand", r, a.periode)
+                        ?: if (r == null && a.periode == null) "Je n'ai pas trouvé de quel rendez-vous tu parles."
+                        else rep.reponse.ifBlank { "Je n'ai pas compris la question, tu peux reformuler ?" }
+                    a.cible = r
+                    dits += dit; ecrits += dit
                 }
                 a.action == "ouvrir" -> {
                     dits += "Sur le téléphone, je ne peux pas ouvrir de dossiers."; ecrits += "Pas de dossiers à ouvrir sur le téléphone."
