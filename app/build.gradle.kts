@@ -17,8 +17,8 @@ android {
         applicationId = "io.github.jordanjacquot.evermind"
         minSdk = 26          // Android 8 : java.time et les canaux de notification sans bibliothèque en plus
         targetSdk = 36
-        versionCode = 3
-        versionName = "0.2.1"
+        versionCode = 4
+        versionName = "0.2.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Téléphones (arm) et émulateur du PC (x86_64) : la voix n'existe pas pour les autres
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
