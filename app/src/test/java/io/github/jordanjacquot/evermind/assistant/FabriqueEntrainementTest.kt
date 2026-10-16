@@ -137,6 +137,10 @@ class FabriqueEntrainementTest {
         put("reponse", reponse)
     }.toString()
 
+    /** Une question : ce qui est demandé, sur un rendez-vous (son code) ou une période (« samedi soir »). */
+    private fun question(sujet: String, r: RendezVous? = null, periode: String? = null) =
+        json(listOf(buildMap { put("action", "question"); put("sujet", sujet); r?.let { put("id", code(it)) }; periode?.let { put("periode", it) } }))
+
     private fun tacheAuHasard(rnd: Random, ag: List<RendezVous>, n: LocalDateTime): Tache? {
         val auj = n.toLocalDate()
         val agenda = AgendaIA(ag, n)
@@ -149,7 +153,7 @@ class FabriqueEntrainementTest {
         val types = listOf("m_jour", "m_heure", "m_decal", "m_lieu", "m_pers", "m_retire", "m_chose", "m_important", "m_rappel", "m_titre", "m_note", "m_duree",
             "s_un", "s_fois", "s_mois", "s_arret", "f_un", "c_simple", "c_avec", "c_lieu", "c_liste", "c_repet", "c_mois", "c_anniv", "c_plusieurs", "c_rappel",
             "q_quand", "q_ou", "q_qui", "q_jour", "q_prendre", "n_rien", "d_double",
-            "c_important", "c_plage", "c_meme", "s_passe", "s_apres", "q_age", "q_note", "q_prochain", "m_note", "s_un", "c_simple", "s_passe", "s_passe", "q_age", "q_age", "m_jourmois", "m_jourmois", "m_serie", "m_serie", "c_simple", "c_plage", "c_important", "c_repet", "m_note2", "m_note2", "s_empeche", "s_empeche", "s_apres", "c_mois")
+            "c_important", "c_plage", "c_meme", "s_passe", "s_apres", "q_age", "q_note", "q_prochain", "m_note", "s_un", "c_simple", "s_passe", "s_passe", "q_age", "q_age", "m_jourmois", "m_jourmois", "m_serie", "m_serie", "c_simple", "c_plage", "c_important", "c_repet", "m_note2", "m_note2", "s_empeche", "s_empeche", "s_apres", "c_mois", "q_libre", "q_duree")
         val type = types.random(rnd)
         fun choisir(l: List<RendezVous>) = l.randomOrNull(rnd)
         fun memeHeure(apres: List<RendezVous>, r: RendezVous, jour: LocalDate, heure: LocalTime) = apres.firstOrNull { it.id == r.id }?.let { it.quand.toLocalDate() == jour && it.quand.toLocalTime() == heure } == true
@@ -345,29 +349,49 @@ class FabriqueEntrainementTest {
                     a.filter { x -> ag.none { it.id == x.id } }.singleOrNull()?.let { it.quand.toLocalDate() == d1 && it.fin?.toLocalDate() == d2 } == true
                 }
             }
+            // Les questions : le modèle dit ce qui est demandé (« sujet ») et sur quoi (le code ou la période) ; Evermind
+            // calcule la réponse, et la vérification regarde qu'elle contient la bonne information
             "q_quand" -> {
                 val r = choisir(tous) ?: return null
-                return Tache(type, "demander quand a lieu « ${titreDe(r)} »", json(emptyList(), "${titreDe(r)} : ${quand(r)}."), listOf(cle(r.titre))) { a, res -> a == ag && res.dit.contains(titreDe(r)) }
+                return Tache(type, "demander quand a lieu « ${titreDe(r)} »", question("quand", r), listOf(cle(r.titre))) { a, res -> a == ag && res.dit.contains(titreDe(r)) && res.dit.contains(quand(r)) }
             }
             "q_ou" -> {
                 val r = choisir(tous.filter { it.lieu.isNotBlank() }) ?: return null
-                return Tache(type, "demander où a lieu « ${titreDe(r)} »", json(emptyList(), "${titreDe(r)} : ${r.lieu}."), listOf(cle(r.titre))) { a, res -> a == ag && res.dit.contains(r.lieu) }
+                return Tache(type, "demander où a lieu « ${titreDe(r)} »", question("ou", r), listOf(cle(r.titre))) { a, res -> a == ag && res.dit.contains(r.lieu) }
             }
             "q_qui" -> {
                 val r = choisir(tous.filter { it.avec.isNotEmpty() }) ?: return null
-                return Tache(type, "demander qui vient à « ${titreDe(r)} »", json(emptyList(), "${titreDe(r)}, avec ${r.avec.joinToString(", ")}."), listOf(cle(r.titre))) { a, res -> a == ag && res.dit.contains(r.avec[0]) }
+                return Tache(type, "demander qui vient à « ${titreDe(r)} »", question("qui", r), listOf(cle(r.titre))) { a, res -> a == ag && r.avec.all { res.dit.contains(it) } }
             }
             "q_prendre" -> {
                 val r = choisir(tous.filter { it.aPreparer.isNotEmpty() }) ?: return null
-                return Tache(type, "demander ce qu'il faut prendre pour « ${titreDe(r)} »", json(emptyList(), "Pour ${titreDe(r)} : ${r.aPreparer.joinToString(", ") { it.texte }}."),
-                    listOf(cle(r.titre), "prendre|apporter|emporter|amener|emmener|besoin|prevoir|sac")) { a, res -> a == ag && res.dit.contains(r.aPreparer[0].texte) }
+                return Tache(type, "demander ce qu'il faut prendre pour « ${titreDe(r)} »", question("prendre", r),
+                    listOf(cle(r.titre), "prendre|apporter|emporter|amener|emmener|besoin|prevoir|sac")) { a, res -> a == ag && r.aPreparer.all { res.dit.contains(it.texte) } }
             }
             "q_jour" -> {
                 val (dit, d) = if (rnd.nextBoolean()) "demain" to auj.plusDays(1) else { val j = DayOfWeek.entries.random(rnd); jours[j.value - 1] to prochain(auj, j) }
                 val f = agenda.entre(d.atStartOfDay(), d.plusDays(1).atStartOfDay())
-                val rep = if (f.isEmpty()) "${dit.replaceFirstChar { it.uppercase() }}, tu n'as rien de prévu." else "${dit.replaceFirstChar { it.uppercase() }} : " +
-                    f.joinToString(", ") { x -> if (x.rv.journee) titreDe(x.rv) else "${titreDe(x.rv)} à ${h(x.prochain.toLocalTime())}" } + "."
-                return Tache(type, "demander ce qui est prévu $dit", json(emptyList(), rep), listOf(dit)) { a, res -> a == ag && res.dit == rep }
+                return Tache(type, "demander ce qui est prévu $dit", question("jour", periode = dit), listOf(dit)) { a, res ->
+                    a == ag && res.dit.startsWith(dit.replaceFirstChar { it.uppercase() }) &&
+                        (if (f.isEmpty()) res.dit.contains("rien") else f.all { x -> res.dit.contains(if (x.rv.journee) titreDe(x.rv) else "${titreDe(x.rv)} à ${h(x.prochain.toLocalTime())}") })
+                }
+            }
+            "q_libre" -> {
+                val j = DayOfWeek.entries.random(rnd)
+                val (dit, d) = if (rnd.nextInt(3) == 0) "demain" to auj.plusDays(1) else jours[j.value - 1] to prochain(auj, j)
+                val (moment, heures) = listOf("soir" to 17..23, "matin" to 0..11, "" to 0..23).random(rnd)
+                val per = if (moment.isEmpty()) dit else "$dit $moment"
+                val f = agenda.entre(d.atStartOfDay(), d.plusDays(1).atStartOfDay()).filter { moment.isEmpty() || (!it.rv.journee && it.prochain.hour in heures) }
+                return Tache(type, "demander s'il est libre $per", question("libre", periode = per), listOf(dit, "libre|dispo|disponible|occupe|quelque chose|prevu|du temps")) { a, res ->
+                    a == ag && if (f.isEmpty()) res.dit.contains("tu es libre") else res.dit.contains("tu as déjà") && f.all { res.dit.contains(titreDe(it.rv)) }
+                }
+            }
+            "q_duree" -> {
+                val r = choisir(horaire.filter { it.fin != null }) ?: return null
+                val min = java.time.Duration.between(r.quand, r.fin).toMinutes()
+                val dit = if (min < 60) "$min min" else if (min % 60 == 0L) "${min / 60} h" else "${min / 60} h %02d".format(min % 60)
+                return Tache(type, "demander combien de temps dure « ${titreDe(r)} »", question("duree", r),
+                    listOf(cle(r.titre), "dure|duree|combien de temps|longtemps|finit|termine")) { a, res -> a == ag && res.dit.contains("dure $dit") }
             }
             "n_rien" -> {
                 val r = choisir(tous) ?: return null
@@ -419,8 +443,8 @@ class FabriqueEntrainementTest {
                 val r = choisir(ag.filter { it.naissance != null }) ?: return null
                 val p = titreDe(r).substringAfter(" de ").substringAfter(" d'")
                 val f = fois(r)
-                return Tache(type, "demander quel âge aura $p", json(emptyList(), "$p aura ${f.year - r.naissance!!} ans le ${f.dayOfMonth} ${mois[f.monthValue - 1]}."),
-                    listOf(sansAccents(p), "age|ans|vieux|vieille")) { a, _ -> a == ag }
+                return Tache(type, "demander quel âge aura $p", question("age", r),
+                    listOf(sansAccents(p), "age|ans|vieux|vieille")) { a, res -> a == ag && res.dit.contains("$p aura ${f.year - r.naissance!!} ans") }
             }
             "q_note" -> {
                 val r = choisir(tous.filter { it.notes.isNotBlank() }) ?: return null
@@ -429,12 +453,14 @@ class FabriqueEntrainementTest {
                     r.notes.startsWith("Code wifi") -> "le code wifi" to "wifi"
                     else -> "les notes" to "note|noté|detail|info|precision|rappelle-moi"
                 }
-                return Tache(type, "demander $q pour « ${titreDe(r)} »", json(emptyList(), "${titreDe(r)} : ${r.notes}."), listOf(cle(r.titre), ind)) { a, _ -> a == ag }
+                return Tache(type, "demander $q pour « ${titreDe(r)} »", question("notes", r), listOf(cle(r.titre), ind)) { a, res -> a == ag && res.dit.contains(r.notes) }
             }
             "q_prochain" -> {
-                val r = agenda.entre(n, n.plusDays(60)).firstOrNull() ?: return null
-                return Tache(type, "demander quel est son prochain rendez-vous", json(emptyList(), "Ton prochain rendez-vous : ${titreDe(r.rv)}, ${quandRV(r.rv, r.prochain, auj)}."),
-                    listOf("prochain|suivant|apres|ensuite|arrive")) { a, _ -> a == ag }
+                agenda.entre(n, n.plusDays(60)).firstOrNull() ?: return null
+                // (le prochain qui a une heure : un anniversaire de la journée ne passe pas devant)
+                val r = agenda.aVenir().let { v -> v.firstOrNull { !it.rv.journee } ?: v.first() }
+                return Tache(type, "demander quel est son prochain rendez-vous", question("prochain"),
+                    listOf("prochain|suivant|apres|ensuite|arrive")) { a, res -> a == ag && res.dit.contains("${titreDe(r.rv)}, ${quandRV(r.rv, r.prochain, auj)}") }
             }
             "m_jourmois" -> {
                 val r = choisir(ag.filter { it.laRepetition?.type == "mois" }) ?: return null
