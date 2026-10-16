@@ -27,3 +27,11 @@ Une ligne par série, à chaque tour (`bash outils/mesurer.sh [modèle.gguf] [no
 | nuit1 + 2 bis | base2 | base | diagnostic | 155 / 160 (96 %) | 145 / 160 (90 %) | 155 / 160 (96 %) |
 | nuit1 + 2 bis | controle1-base | base | controle | 112 / 131 (85 %) | 117 / 131 (89 %) | 116 / 131 (88 %) |
 | nuit1 + 2 bis | controle1-complexe | complexe | controle | 110 / 165 (66 %) | 147 / 165 (89 %) | 142 / 165 (86 %) |
+| nuit1 + 2 bis + règles base + étape 2 | lots écrits à la main | base | — | 874 / 874 (100 %) | — | 874 / 874 (100 %) |
+| nuit1 + 2 bis + règles base + étape 2 | serie1 | complexe | diagnostic | 126 / 187 (67 %) | 148 / 187 (79 %) | 154 / 187 (82 %) |
+| nuit1 + 2 bis + règles base + étape 2 | base1 | base | diagnostic | 170 / 172 (98 %) | 154 / 172 (89 %) | 171 / 172 (99 %) |
+| nuit1 + 2 bis + règles base + étape 2 | base2 | base | diagnostic | 160 / 160 (100 %) | 143 / 160 (89 %) | 160 / 160 (100 %) |
+| nuit1 + 2 bis + règles base + étape 2 | base3 | base | diagnostic | 161 / 161 (100 %) | 147 / 161 (91 %) | 161 / 161 (100 %) |
+| nuit1 + 2 bis + règles base + étape 2 | base4 | base | diagnostic | 154 / 154 (100 %) | 140 / 154 (90 %) | 154 / 154 (100 %) |
+| nuit1 + 2 bis + règles base + étape 2 | controle1-base | base | controle | 118 / 131 (90 %) | 119 / 131 (90 %) | 121 / 131 (92 %) |
+| nuit1 + 2 bis + règles base + étape 2 | controle1-complexe | complexe | controle | 110 / 165 (66 %) | 145 / 165 (87 %) | 141 / 165 (85 %) |
