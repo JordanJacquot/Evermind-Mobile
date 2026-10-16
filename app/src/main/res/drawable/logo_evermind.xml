@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Le logo d'Evermind, fixe (LogoEvermind dans Composants.kt, en Néon) : un « E » blanc et ses reflets cyan et magenta,
+     dans un anneau dégradé de 300°, sur un petit disque de nuit pour rester lisible sur une notification claire -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="48"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="@color/fond"
+        android:pathData="M24,0 a24,24 0 1,0 0.01,0 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round"
+        android:pathData="M43.4,31.06 A20.64,20.64 0 1,1 39.81,10.73">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="sweep"
+                android:centerX="24"
+                android:centerY="24">
+                <item android:offset="0" android:color="#FF00E5FF" />
+                <item android:offset="0.33" android:color="#FFB04BFF" />
+                <item android:offset="0.66" android:color="#FFFF2EB5" />
+                <item android:offset="1" android:color="#FF00E5FF" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group android:translateX="-1.2">
+        <path
+            android:fillColor="#CC00E5FF"
+            android:pathData="M18,16 H30.5 V19.6 H22.2 V22.3 H29.2 V25.7 H22.2 V28.4 H30.5 V32 H18 Z" />
+    </group>
+    <group android:translateX="1.2">
+        <path
+            android:fillColor="#CCFF2EB5"
+            android:pathData="M18,16 H30.5 V19.6 H22.2 V22.3 H29.2 V25.7 H22.2 V28.4 H30.5 V32 H18 Z" />
+    </group>
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M18,16 H30.5 V19.6 H22.2 V22.3 H29.2 V25.7 H22.2 V28.4 H30.5 V32 H18 Z" />
+</vector>

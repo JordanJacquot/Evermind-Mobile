@@ -45,12 +45,14 @@ object Notifications {
         val heure = heureAlerte(rdv, fois, maintenant)
         val etiquette = "Rappel  ·  $dans"
 
-        fun vue(layout: Int) = RemoteViews(contexte.packageName, layout).apply {
+        // (repliée, Android ne laisse la place qu'à deux lignes : l'heure rejoint l'étiquette ; dépliée, elle a sa ligne)
+        fun vue(layout: Int, repliee: Boolean) = RemoteViews(contexte.packageName, layout).apply {
             setTextViewText(R.id.icone, rdv.sorte.icone)
-            setTextViewText(R.id.etiquette, etiquette)
+            setTextViewText(R.id.etiquette, if (repliee) "$heure  ·  $dans" else etiquette)
             setTextColor(R.id.etiquette, couleur)
             setTextViewText(R.id.titre, rdv.titre)
             setTextViewText(R.id.heure, heure)
+            setViewVisibility(R.id.heure, if (repliee) android.view.View.GONE else android.view.View.VISIBLE)
             setInt(R.id.barre, "setBackgroundColor", couleur)
         }
 
@@ -72,8 +74,9 @@ object Notifications {
             .setContentText("$heure · $dans")
             .setSubText("Rappel")
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
-            .setCustomContentView(vue(R.layout.notification_rappel))
-            .setCustomHeadsUpContentView(vue(R.layout.notification_rappel))
+            .setCustomContentView(vue(R.layout.notification_rappel, repliee = true))
+            .setCustomBigContentView(vue(R.layout.notification_rappel, repliee = false))
+            .setCustomHeadsUpContentView(vue(R.layout.notification_rappel, repliee = true))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(ouvrir)

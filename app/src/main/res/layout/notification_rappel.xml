@@ -33,6 +33,8 @@
             android:id="@+id/etiquette"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
             android:textColor="@color/cyan"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -52,4 +54,12 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
     </LinearLayout>
+
+    <!-- Le logo d'Evermind, discret à droite : on voit d'un coup d'œil d'où vient le rappel -->
+    <ImageView
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="8dp"
+        android:contentDescription="Evermind"
+        android:src="@drawable/logo_evermind" />
 </LinearLayout>
