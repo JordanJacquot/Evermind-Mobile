@@ -224,6 +224,7 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
             modifier = Modifier.fillMaxSize().padding(marges).padding(horizontal = 16.dp),
         ) {
             item { EnTete(reglages = reglages, ajouter = { ajouter(etat.jourChoisi) }) }
+            item { io.github.jordanjacquot.evermind.maj.BandeauMiseAJour() }
             item {
                 Saisie(
                     phrase = phrase,

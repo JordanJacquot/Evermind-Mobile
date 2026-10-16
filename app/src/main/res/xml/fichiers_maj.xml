@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Le seul fichier qu'Evermind montre à Android : l'APK d'une mise à jour, pour son installeur (maj/MiseAJour.kt) -->
+<paths>
+    <cache-path name="maj" path="maj/" />
+</paths>

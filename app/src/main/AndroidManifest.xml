@@ -2,8 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Internet sert seulement à télécharger les modèles de la voix (« Installer la voix », versions et empreintes
-         fixées). Les rendez-vous, la voix et ce qui est dit restent sur le téléphone. -->
+         fixées) et à voir s'il existe une nouvelle version d'Evermind (la page des versions sur GitHub). Les
+         rendez-vous, la voix et ce qui est dit restent sur le téléphone. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Les mises à jour : Android demande toujours de confirmer l'installation -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Le micro, pour la dictée -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
@@ -41,6 +44,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- L'APK d'une mise à jour, montré à l'installeur d'Android -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.maj"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/fichiers_maj" />
+        </provider>
 
         <receiver
             android:name=".rappels.RecepteurRappels"

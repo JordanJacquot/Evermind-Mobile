@@ -24,6 +24,8 @@ class EvermindApp : Application() {
     val voix: Voix by lazy {
         Voix(this, portee).also { v -> v.motsAgenda = { depot.liste().flatMap { r -> listOf(r.titre, r.lieu) + r.avec } } }
     }
+    /** Les mises à jour d'Evermind (le bandeau de l'écran principal). */
+    val maj: io.github.jordanjacquot.evermind.maj.MiseAJour by lazy { io.github.jordanjacquot.evermind.maj.MiseAJour(this, portee) }
     /** L'assistant (le modèle choisi selon la mémoire du téléphone), chargé seulement quand on lui parle. */
     val cerveau: Cerveau by lazy { Cerveau(this, portee) { r -> r.rappelsVoulus(ReglagesRappels(this)) } }
 
@@ -55,5 +57,7 @@ class EvermindApp : Application() {
             android.util.Log.i("Evermind", "lexique des noms prêt en ${System.currentTimeMillis() - t0} ms")
         }
         voix.prechauffer()
+        // Une nouvelle version ? (au plus une fois par jour, sans gêner le lancement)
+        portee.launch { kotlinx.coroutines.delay(5_000); maj.verifierSiBesoin() }
     }
 }

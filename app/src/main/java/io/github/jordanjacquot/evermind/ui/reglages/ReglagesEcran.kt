@@ -160,6 +160,25 @@ fun ReglagesEcran(retour: () -> Unit) {
                 }
             }
 
+            if (onglet == 0) Section("Mises à jour", "Evermind regarde une fois par jour s'il existe une nouvelle version (sur la page des versions de GitHub, sans rien envoyer) ; un bandeau la propose alors sur l'écran principal.") {
+                val maj = app.maj
+                val etatMaj by maj.etat.collectAsStateWithLifecycle()
+                var auto by remember { mutableStateOf(maj.auto) }
+                Text("Version installée : ${maj.versionActuelle}", style = MaterialTheme.typography.bodyMedium)
+                Ligne("Chercher les mises à jour", auto) { auto = it; maj.auto = it }
+                val texte = when (val e = etatMaj) {
+                    is io.github.jordanjacquot.evermind.maj.EtatMaj.Verification -> "Recherche..."
+                    is io.github.jordanjacquot.evermind.maj.EtatMaj.AJour -> "✓ Tu as la dernière version."
+                    is io.github.jordanjacquot.evermind.maj.EtatMaj.Disponible -> "Evermind ${e.v.nom} est disponible : le bandeau de l'écran principal la propose."
+                    is io.github.jordanjacquot.evermind.maj.EtatMaj.Telechargement -> "Téléchargement de la ${e.v.nom}..."
+                    is io.github.jordanjacquot.evermind.maj.EtatMaj.Prete -> "Evermind ${e.v.nom} est prête à installer (bandeau de l'écran principal)."
+                    is io.github.jordanjacquot.evermind.maj.EtatMaj.Echec -> e.message
+                    else -> null
+                }
+                texte?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = ev.discret, modifier = Modifier.padding(top = 4.dp)) }
+                BoutonAccent("Vérifier maintenant", { maj.verifier() }, Modifier.padding(top = 8.dp))
+            }
+
             if (onglet == 1) Section("Rappels", "Les rappels donnés par défaut. Pour un rendez-vous en particulier, tu peux en choisir d'autres dans son formulaire (ou les dire : « rappelle-moi 2 jours avant »).") {
                 if (!notificationsPermises) {
                     Text("Evermind n'a pas le droit d'envoyer des notifications : aucun rappel ne s'affichera.",
