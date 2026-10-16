@@ -62,7 +62,7 @@ class Cerveau(private val contexte: Context, private val portee: CoroutineScope,
         // (un ancien assistant, d'avant le modèle entraîné : son fichier et ses consignes lues rendent leur place)
         val gardes = ModeleAssistant.entries.map { java.io.File(it.fichier.vers).name }.toSet()
         java.io.File(Modeles.dossier(contexte), "assistant").listFiles()?.filter { it.name !in gardes }?.forEach { it.delete() }
-        java.io.File(contexte.filesDir, "assistant").listFiles()?.filter { f -> ModeleAssistant.entries.none { f.name == "${it.name.lowercase()}.consignes" } }?.forEach { it.delete() }
+        java.io.File(contexte.filesDir, "assistant").listFiles()?.filter { f -> ModeleAssistant.entries.none { f.name == etat(it).name } }?.forEach { it.delete() }
     }
 
     private val _choisi = MutableStateFlow(reglages.getString("modele", null)?.let { n -> ModeleAssistant.entries.firstOrNull { it.name == n } })
@@ -87,7 +87,8 @@ class Cerveau(private val contexte: Context, private val portee: CoroutineScope,
     private var veille: Job? = null
 
     /** Les consignes déjà lues par ce modèle, gardées d'un lancement à l'autre. */
-    private fun etat(m: ModeleAssistant) = java.io.File(contexte.filesDir, "assistant/${m.name.lowercase()}.consignes")
+    // (propres à chaque version du modèle : celles lues par l'ancien ne valent rien pour le nouveau)
+    private fun etat(m: ModeleAssistant) = java.io.File(contexte.filesDir, "assistant/${java.io.File(m.fichier.vers).nameWithoutExtension}.consignes")
 
     private val moteur = MoteurIA { messages, schema ->
         withContext(Dispatchers.Default) {

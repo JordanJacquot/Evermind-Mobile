@@ -50,9 +50,10 @@ object Modeles {
             "4c3052abaa60943a341f193888cf6abd68787dae6ab8ae5c925a706caa247e4e", 132303094, Forme.TAR_BZ2, "kokoro",
             garder = listOf("model.int8.onnx", "voices.bin", "tokens.txt", "espeak-ng-data/", "LICENSE"), temoin = "kokoro/model.int8.onnx"),
         // (entraîné pour Evermind par outils/entrainer, publié dans les versions du projet)
+        // (une nouvelle version du modèle a un nouveau nom de fichier : l'ancien est effacé, le nouveau est proposé)
         FichierModele(Pack.IA_EVERMIND, "assistant (Evermind 0.6B)",
-            "https://github.com/JordanJacquot/Evermind-Mobile/releases/download/assistant-v1/evermind-0.6b-q8_0.gguf",
-            "23343a94c57b86f41921f68e96d0edb1b2504d78933fdb1efd2e56aef292afb0", 639446880, Forme.FICHIER, "assistant/evermind-0.6b-q8_0.gguf"),
+            "https://github.com/JordanJacquot/Evermind-Mobile/releases/download/assistant-v2/evermind-0.6b-v2-q8_0.gguf",
+            "040d7b5ce176b058a02d614161261b6ccac7af6ab702228bbce81adaf8f6e871", 639446912, Forme.FICHIER, "assistant/evermind-0.6b-v2-q8_0.gguf"),
         FichierModele(Pack.EVEIL, "écoute de « OK Evermind » (Vosk)", "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip",
             "cabf6180e177eb9b3a9a9d43a437bd5e549f3a7d09525e5d69a3fed787be12ad", 42233323, Forme.ZIP, "vosk", temoin = "vosk/am/final.mdl"),
     )
