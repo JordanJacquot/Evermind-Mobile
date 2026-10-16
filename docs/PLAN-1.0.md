@@ -141,9 +141,16 @@ On s'arrête quand la série de contrôle dépasse 90 % deux nuits de suite.
 
 | Quand | Quoi |
 |---|---|
-| Jour 1 | Étape 0 (faite le 16 octobre), étape 2 (l'action « question ») et 2 bis (qui répond) |
-| Nuit 1 | Étape 1 : premier entraînement sur des exemples propres |
-| Jours et nuits 2 à 5 | Étape 3, la boucle ; étape 4 avec tes phrases |
+Ce qui charge le PC (les phrases écrites par le 4B, l'entraînement, les mesures avec le modèle) se fait la nuit ; le
+code et les règles, de jour. Un tour de nuit : `bash outils/entrainer/tour.sh <nom> [graine] [tâches] [époques]`.
+
+| Quand | Quoi |
+|---|---|
+| Jour 1 (16 octobre) | Étape 0, faite |
+| Nuit 1 (du 16 au 17) | Étape 1 : premier tour sur des exemples entièrement neufs (`nuit1`) |
+| Jour 2 | Étapes 2 (l'action « question ») et 2 bis (qui répond), d'après les mesures de la nuit 1 |
+| Nuit 2 | Un tour avec l'action « question » dans la fabrique |
+| Jours et nuits 3 à 6 | Étape 3, la boucle ; étape 4 avec tes phrases |
 | Ensuite | Étape 5, puis la 1.0 |
 
 Le nombre de nuits dépend des progrès. Chaque tour est noté dans `docs/MESURES.md` : on voit vite si on avance ou si
