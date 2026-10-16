@@ -156,3 +156,15 @@ code et les règles, de jour. Un tour de nuit : `bash outils/entrainer/tour.sh <
 Le nombre de nuits dépend des progrès. Chaque tour est noté dans `docs/MESURES.md` : on voit vite si on avance ou si
 on plafonne. Si on plafonne deux nuits de suite malgré des exemples propres, on en reparle : piste suivante, un
 entraînement complet (toutes les couches) au lieu de LoRA, ou des exemples écrits par un plus gros modèle.
+
+## Après la 1.0 : l'assistant sur Evermind PC
+
+Décidé le 16 octobre : une fois la 1.0 du mobile sortie, son assistant est porté sur Evermind PC (aujourd'hui Qwen3 4B
+avec les longues consignes : 75 % sur la base, 64 % sur les phrases complexes, contre 92 % et 85 % pour le mobile).
+À faire alors, avec la session qui s'occupe d'Evermind PC (il est géré par Mindset) :
+
+- le modèle final (`assistant-vN`) et ses consignes courtes, avec l'agenda écrit exactement comme sur le mobile ;
+- l'action « question » (Evermind calcule la réponse) ;
+- ce que le PC fait en plus (ouvrir des dossiers) : appris par le modèle, ou gardé aux règles ;
+- les règles du mobile (`Ordres.kt`) comme référence pour celles du PC, et le même partage règles / modèle ;
+- mesuré avec les mêmes séries (`outils/comparer-pc.ps1`).
