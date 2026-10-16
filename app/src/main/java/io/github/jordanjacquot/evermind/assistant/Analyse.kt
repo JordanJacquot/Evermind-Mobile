@@ -132,8 +132,9 @@ fun ecartAction(texte: String, actions: List<ActionIA>, codes: Map<String, Strin
     val modif = inn.modif
     val creer = inn.creer
     val sortes = actions.map { it.action }
-    if (inn.question && !supp && !modif && !creer && sortes.any { it != "annuler" }) {
-        return "C'est une QUESTION : réponds seulement dans \"reponse\", avec \"actions\" vide. Ne modifie rien."
+    // (l'action « question » ne change rien : Evermind calcule la réponse)
+    if (inn.question && !supp && !modif && !creer && sortes.any { it != "annuler" && it != "question" }) {
+        return "C'est une QUESTION : utilise seulement l'action \"question\" (avec \"sujet\", et l'id ou la \"periode\"). Ne modifie rien."
     }
     if (creer && !supp && !modif && !inn.question) {
         if (sortes.isEmpty()) return "L'utilisateur demande de CRÉER un nouvel événement (il n'a pas besoin d'exister déjà). Utilise l'action \"creer\" avec sa phrase."

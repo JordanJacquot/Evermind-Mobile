@@ -1938,4 +1938,49 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
     private companion object {
         const val Aide = "Je tiens ton agenda. Dis-moi par exemple « dentiste jeudi à 15 h », « décale le foot à 20 h », « supprime les raids de novembre » ou « qu'est-ce que j'ai demain ? »."
     }
+
+    /**
+     * L'action « question » du modèle : il dit ce qui est demandé (« age ») et sur quoi (le rendez-vous, ou la période
+     * « samedi soir ») ; la réponse est celle des règles. null si la question n'a pas de sens (rien sur quoi répondre).
+     */
+    fun repondre(sujet: String, rv: RendezVous?, periode: String?): String? {
+        val q = net(sujet.trim().lowercase())
+        // Une période (« demain », « samedi soir ») : ce qui est prévu, si je suis libre, ce qu'il faut préparer, où aller
+        val p = periode?.trim()?.takeIf { it.isNotEmpty() }
+        if (p != null && (rv == null || q in setOf("jour", "libre"))) {
+            val t = when (q) {
+                "libre" -> "est-ce que je suis libre $p ?"
+                "prendre" -> "qu'est-ce que je dois preparer $p ?"
+                "ou" -> "ou est-ce que je vais $p ?"
+                else -> "qu'est-ce que j'ai $p ?"
+            }
+            val per = periodeQuestion(t, net(t)) ?: return null
+            return surLaPeriode(per, net(t))
+        }
+        if (q == "prochain" && rv == null) {
+            val f = agenda.aVenir().let { v -> v.firstOrNull { !it.rv.journee } ?: v.firstOrNull() } ?: return "Tu n'as rien de prévu."
+            return "Ton prochain rendez-vous : ${titreDe(f.rv)}, ${quandRV(f.rv, f.prochain, today)}."
+        }
+        if (q == "libre" && rv == null) return question("quand est-ce que je suis libre ?", "quand est-ce que je suis libre ?")
+        if (rv == null) return null
+        // Ce que demande le sujet, dit comme une question que les règles savent lire
+        val s = when (q) {
+            "ou" -> "c'est ou"
+            "qui" -> "avec qui"
+            "age" -> "quel age"
+            "notes", "note", "code" -> "notes"
+            "prendre" -> "prendre"
+            "duree" -> "duree"
+            "fin" -> "finit"
+            "fois", "combien" -> "combien de fois"
+            "apres" -> "qu'est-ce que j'ai apres"
+            "fait" -> "c'est fait"
+            "dans" -> "dans combien"
+            "important" -> "important"
+            "repete" -> "revient"
+            else -> "quand"
+        }
+        memoire.dernier = rv.id
+        return surRendezVous(rv, s)
+    }
 }
