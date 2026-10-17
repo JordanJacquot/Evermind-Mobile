@@ -12,8 +12,12 @@ val ConsignesFixes: String by lazy {
     Consignes::class.java.classLoader!!.getResourceAsStream("assistant/consignes.txt")!!.reader(Charsets.UTF_8).readText().trimEnd()
 }
 
-/** Le schéma de la réponse ($SchemaIA sur PC) : l'IA ne peut répondre que dans cette forme. */
-const val SchemaIA = """{"type":"object","required":["actions","reponse"],"properties":{"actions":{"type":"array","items":{"type":"object","required":["action"],"properties":{"action":{"type":"string","enum":["creer","modifier","supprimer","fait","annuler","ouvrir","question"]},"id":{"type":"string"},"phrase":{"type":"string"},"titre":{"type":"string"},"lieu":{"type":"string"},"personnes":{"type":"array","items":{"type":"string"}},"notes":{"type":"string"},"choses_a_prendre":{"type":"array","items":{"type":"string"}},"important":{"type":"boolean"},"periode":{"type":"string"},"rappels":{"type":"array","items":{"type":"string"}},"retirer_personnes":{"type":"array","items":{"type":"string"}},"dossiers":{"type":"array","items":{"type":"string"}},"ouvrir_au_debut":{"type":"boolean"},"sujet":{"type":"string","enum":["quand","ou","qui","age","notes","prendre","jour","prochain","libre","duree","fin","fois","apres","fait","dans","important","repete"]}}}},"reponse":{"type":"string"}}}"""
+/**
+ * Le schéma de la réponse ($SchemaIA sur PC) : l'IA ne peut répondre que dans cette forme. La grammaire qui en est
+ * tirée impose l'ordre des champs : il doit être celui des exemples d'entraînement (« action », « sujet », puis « id »
+ * ou « periode »), sinon le modèle ne peut plus écrire un champ qu'il met plus tôt.
+ */
+const val SchemaIA = """{"type":"object","required":["actions","reponse"],"properties":{"actions":{"type":"array","items":{"type":"object","required":["action"],"properties":{"action":{"type":"string","enum":["creer","modifier","supprimer","fait","annuler","ouvrir","question"]},"sujet":{"type":"string","enum":["quand","ou","qui","age","notes","prendre","jour","prochain","libre","duree","fin","fois","apres","fait","dans","important","repete"]},"id":{"type":"string"},"phrase":{"type":"string"},"titre":{"type":"string"},"lieu":{"type":"string"},"personnes":{"type":"array","items":{"type":"string"}},"notes":{"type":"string"},"choses_a_prendre":{"type":"array","items":{"type":"string"}},"important":{"type":"boolean"},"periode":{"type":"string"},"rappels":{"type":"array","items":{"type":"string"}},"retirer_personnes":{"type":"array","items":{"type":"string"}},"dossiers":{"type":"array","items":{"type":"string"}},"ouvrir_au_debut":{"type":"boolean"}}}},"reponse":{"type":"string"}}}"""
 
 /** Les consignes de cette demande, et les codes (« e1fec9 ») qui désignent les rendez-vous. */
 class Contexte(val systeme: String, val codes: Map<String, String>)
