@@ -126,12 +126,14 @@ class Assistant(
     /**
      * Une phrase pour le modèle d'abord : longue (plus de 10 mots, sans « euh », « du coup », « s'il te plaît »), parlée
      * (« euh », « du coup », « je voudrais », « tu pourrais »...), et sans ce que les règles font mieux que lui : une
-     * date relative (la veille, deux jours avant, le deuxième mardi), plusieurs actions, une liste, une hypothèse.
+     * date relative (la veille, deux jours avant, le deuxième mardi), plusieurs actions, une liste, une hypothèse, une
+     * hésitation (« peut-être », « mais pas maintenant », « je ne suis pas sûr » : rien à faire, les règles le savent).
      */
     private fun pourLeModele(texte: String): Boolean {
         val n = sansAccents(texte.lowercase().replace('’', '\''))
         val utiles = n.replace(Regex("\\b(?:euh|bon|du coup|alors|s'il te plait|s'il vous plait|stp|svp)\\b"), " ")
         if (Regex("[\\p{L}\\d']+").findAll(utiles).count() <= 10) return false
+        if (n.contient("\\b(?:peut-etre|pas maintenant|pas tout de suite|pas encore|plus tard|un jour|je me demande|je me pose la question|pas sur|pas certain|je sais pas si|je ne sais pas si|j'hesite|j'aurais aime|j'aurais voulu)\\b")) return false
         if (!n.contient("\\b(?:euh|du coup|je voudrais|j'aimerais|je veux|tu pourrais|je pense|il faudrait|faudrait|faut que|parce que|je te demande|je me dis|genre|bon|alors|oui|ah)\\b")) return false
         val verbe = "(?:mets|met|ajoute|rajoute|supprime|efface|decale|deplace|rappelle|previens|marque|annule|enleve)"
         return !n.contient("\\b(?:la veille|le lendemain|avant|apres|meme jour|premier|premiere|deuxieme|troisieme|dernier|derniere|" +

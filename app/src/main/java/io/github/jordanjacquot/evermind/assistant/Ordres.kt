@@ -147,6 +147,10 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         // « Comme je suis malade, annule le foot », « annule le foot parce que je suis malade » : la raison ne compte pas
         trouve(t, "^(?:[Cc]omme|[Vv]u que|[Pp]uisque|[ÉéEe]tant donn[ée] que|[Pp]arce que|[Dd]u coup|[Bb]ref|[Ee]n fait)\\b[^,]{3,},\\s*(?<r>.{4,})$").takeIf { it.ok }?.let { t = it.g("r")!! }
         t = t.remplace("\\s*,?\\s*\\b(?:parce que|parce qu'|car|puisque|vu que)\\b[^,]*[.!]?$", "").ifBlank { t }
+        // « Mon pote m'a demandé si le foot était annulé » : une question rapportée, pas une demande (« on m'a dit que le
+        // coiffeur est reporté », lui, change le rendez-vous, plus bas)
+        if (net(t).contient("\\b(?:m'a|m'ont|nous a|nous ont)\\s+demande\\s+(?:si|s'il|s'ils|quand|ou|pourquoi|comment)\\b"))
+            return ReponseIA(emptyList(), "D'accord, je ne change rien. Si tu veux que je fasse quelque chose, dis-le-moi.")
         // « J'ai reçu un message : le coiffeur est reporté à samedi » : ce que dit le message
         trouve(t, "^(?:j'ai (?:re[çc]u|eu) (?:un|une) (?:message|sms|mail|e-mail|appel|texto|notification)|on m'a (?:dit|pr[ée]venu|[ée]crit)|on vient de me dire)\\s*(?::|que|qu')\\s*(?<r>.{4,})$").takeIf { it.ok }?.let { t = it.g("r")!! }
         t = t.remplace("^(?:(?:euh|bon|alors|donc|ok evermind|okay evermind|evermind|ok|okay|ben|bah|eh bien|genre|finalement|du coup|en fait|ouais|ouai|hmm+|hum|attends|bon ben|tiens|dis|voil[àa]|allez|bon allez|aller)\\s*,?\\s+)+", "")
@@ -178,6 +182,11 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         // « supprime tout (pour) demain », « supprime tout ce qui est (prévu) pour demain » : tout ce qui est prévu ce jour-là
         t = t.remplace("\\b(supprime|efface|annule|enl[èe]ve|vire|retire)\\s+tout\\s+(?:ce qui est\\s+|ce qu'il y a\\s+)?(?:pr[ée]vu\\s+)?(?:pour\\s+|de\\s+)?(?=demain|apr[èe]s-demain|aujourd'hui|ce soir|ce week-end|cette semaine|$RxJour)", "$1 tout ce que j'ai ")
         trouve(t, "^(?<p>demain|apr[èe]s-demain|aujourd'hui|$RxJour(?:\\s+\\d{1,2})?)\\s*,?\\s*tout (?:est )?[àa] (?:effacer|supprimer|annuler|enlever)\\s*[.!]*$").takeIf { it.ok }?.let { t = "supprime tout ce que j'ai ${it.g("p")}" }
+        // « Vide mon week-end », « libère ma soirée » sans dire lequel : celui qui vient
+        trouve(t, "^(?:[Vv]ide|[Ll]ib[èe]re|[Ee]fface|[Ss]upprime|[Aa]nnule)\\s+(?:mon|ma)\\s+(?<q>week-end|journ[ée]e|soir[ée]e|matin[ée]e|apr[èe]s-midi|semaine)\\s*[.!]*$").takeIf { it.ok }?.let {
+            val quand = when (net(it.g("q")!!)) { "week-end" -> "ce week-end"; "journee" -> "aujourd'hui"; "soiree" -> "ce soir"; "matinee" -> "ce matin"; "apres-midi" -> "cet après-midi"; else -> "cette semaine" }
+            t = "supprime tout ce que j'ai $quand"
+        }
         // « du 20 au 27 » sans mois : le prochain mois où le 20 est encore à venir
         t = t.remplace("\\bdu (?<a>\\d{1,2}) au (?<b>\\d{1,2})\\b(?!\\s*(?:$RxMoisNu|/|h\\b|heures?))") { x ->
             val d1 = x.g("a")!!.toInt()
@@ -1656,6 +1665,12 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         val cibles = chercher(mots(s))
         val c = if (cibles.size == 1) cibles[0] else if (cibles.size > 1) departager(cibles, t) else
             if (s.contient("\\b(?:qui|avec qui)\\b") && s.contient("\\b\\d{1,2}\\s*h") || s.contient("\\b(?:invites|invitees|participants|convives)\\b")) parDate(t, s) else null
+        // « Quand est la soirée chez Max ? », puis « Qui vient ? » : une question courte sur un détail, sans rendez-vous
+        // nommé, juste après avoir parlé d'un rendez-vous, porte sur lui
+        if (c == null && memoire.recente(maintenant) && mots(s).size <= 6 &&
+            s.contient("^(?:et\\s+)?(?:qui (?:vient|viendra|sera la|y va|est invite)|c'est qui|avec qui|c'est ou|ou (?:c'est|ca se passe)|a quelle heure|ca dure combien|combien de temps|ca finit a quelle heure|il faut prendre quoi|quoi prendre|je prends quoi|c'est quand)\\b")) {
+            memoire.dernier?.let { agenda.get(it) }?.let { return surRendezVous(it, s) }
+        }
         // « C'est quand mon prochain jour sans rien ? »
         if (s.contient("\\bprochain (?:jour|soir|week-end) (?:libre|sans rien|de libre|tranquille|vide)\\b|\\bquand (?:est-ce que )?je suis libre\\b")) {
             var j = today.plusDays(1)
