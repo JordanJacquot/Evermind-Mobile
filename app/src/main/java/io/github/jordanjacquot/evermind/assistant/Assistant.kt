@@ -164,6 +164,12 @@ class Assistant(
         if (partis.size >= 3 && !texte.contient("\\b(?:tout|tous|toutes|vide|agenda)\\b") && partis.any { !nomme(texte, it) }) return "${partis.size} suppressions"
         if (compris != null && compris.actions.any { it.action == "modifier" && vide(it) } && nouveaux.isEmpty() && partis.isEmpty() &&
             !agendaDiffere(avant, apres)) return "rien de changé"
+        // « C'est changé : Foot, samedi 17 à 19 h » alors que rien n'a changé (on demandait dimanche) : pas compris
+        // (le jour dit est celui de la phrase : le rendez-vous y était déjà, rien à changer)
+        if (dit.startsWith("C'est changé") && !agendaDiffere(avant, apres)) {
+            val jours = Regex("lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche").findAll(sansAccents(dit)).map { it.value }.toList()
+            if (jours.none { sansAccents(texte).contains(it) }) return "« c'est changé » sans changement"
+        }
         return null
     }
 
