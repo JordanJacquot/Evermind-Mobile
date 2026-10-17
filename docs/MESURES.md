@@ -43,3 +43,18 @@ Une ligne par série, à chaque tour (`bash outils/mesurer.sh [modèle.gguf] [no
 | nuit2 | base4 | base | diagnostic | 154 / 154 (100 %) | 121 / 154 (78 %) | 154 / 154 (100 %) |
 | nuit2 | controle1-base | base | controle | 118 / 131 (90 %) | 104 / 131 (79 %) | 120 / 131 (91 %) |
 | nuit2 | controle1-complexe | complexe | controle | 110 / 165 (66 %) | 126 / 165 (76 %) | 135 / 165 (81 %) |
+| nuit2 + schéma corrigé | lots écrits à la main | base | — | 874 / 874 (100 %) | — | 872 / 874 (99 %) |
+| nuit2 + schéma corrigé | serie1 | complexe | diagnostic | 126 / 187 (67 %) | 161 / 187 (86 %) | 152 / 187 (81 %) |
+| nuit2 + schéma corrigé | base1 | base | diagnostic | 170 / 172 (98 %) | 152 / 172 (88 %) | 170 / 172 (98 %) |
+| nuit2 + schéma corrigé | base2 | base | diagnostic | 160 / 160 (100 %) | 147 / 160 (91 %) | 160 / 160 (100 %) |
+| nuit2 + schéma corrigé | base3 | base | diagnostic | 161 / 161 (100 %) | 150 / 161 (93 %) | 161 / 161 (100 %) |
+| nuit2 + schéma corrigé | base4 | base | diagnostic | 154 / 154 (100 %) | 136 / 154 (88 %) | 154 / 154 (100 %) |
+| nuit2 + schéma corrigé | controle1-base | base | controle | 118 / 131 (90 %) | 119 / 131 (90 %) | 121 / 131 (92 %) |
+| nuit2 + schéma corrigé | controle1-complexe | complexe | controle | 110 / 165 (66 %) | 148 / 165 (89 %) | 140 / 165 (84 %) |
+| nuit2 + correctifs | serie1 | complexe | diagnostic | 126 / 187 (67 %) | 162 / 187 (86 %) | 153 / 187 (81 %) |
+| nuit2 + correctifs | base1 | base | diagnostic | 170 / 172 (98 %) | 152 / 172 (88 %) | 170 / 172 (98 %) |
+| nuit2 + correctifs | base2 | base | diagnostic | 160 / 160 (100 %) | 144 / 160 (90 %) | 160 / 160 (100 %) |
+| nuit2 + correctifs | base3 | base | diagnostic | 161 / 161 (100 %) | 150 / 161 (93 %) | 161 / 161 (100 %) |
+| nuit2 + correctifs | base4 | base | diagnostic | 154 / 154 (100 %) | 137 / 154 (88 %) | 154 / 154 (100 %) |
+| nuit2 + correctifs | controle1-base | base | controle | 118 / 131 (90 %) | 120 / 131 (91 %) | 121 / 131 (92 %) |
+| nuit2 + correctifs | controle1-complexe | complexe | controle | 110 / 165 (66 %) | 148 / 165 (89 %) | 140 / 165 (84 %) |
