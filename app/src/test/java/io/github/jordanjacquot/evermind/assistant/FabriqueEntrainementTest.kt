@@ -156,7 +156,9 @@ class FabriqueEntrainementTest {
             "c_important", "c_plage", "c_meme", "s_passe", "s_apres", "q_age", "q_note", "q_prochain", "m_note", "s_un", "c_simple", "s_passe", "s_passe", "q_age", "q_age", "m_jourmois", "m_jourmois", "m_serie", "m_serie", "c_simple", "c_plage", "c_important", "c_repet", "m_note2", "m_note2", "s_empeche", "s_empeche", "s_apres", "c_mois", "q_libre", "q_duree",
             // (nuit 3 : les tournures que les règles faisaient mieux que le modèle)
             "c_jours", "c_jours", "c_jusqua", "c_apporte", "c_apporte", "c_huit", "c_huit", "c_soir", "c_soir", "c_lieu", "c_lieu",
-            "d_ajout2", "d_ajout2", "d_ajout2", "d_suppr_creer", "d_suppr_creer", "q_double", "q_double")
+            "d_ajout2", "d_ajout2", "d_ajout2", "d_suppr_creer", "d_suppr_creer", "q_double", "q_double",
+            // (nuit 4 : une création qui dit tout à la fois, et une série avec une plage horaire)
+            "c_complet", "c_complet", "c_complet", "c_complet", "c_complet", "c_complet", "c_repet_plage", "c_repet_plage", "q_double", "q_double")
         val type = types.random(rnd)
         fun choisir(l: List<RendezVous>) = l.randomOrNull(rnd)
         fun memeHeure(apres: List<RendezVous>, r: RendezVous, jour: LocalDate, heure: LocalTime) = apres.firstOrNull { it.id == r.id }?.let { it.quand.toLocalDate() == jour && it.quand.toLocalTime() == heure } == true
@@ -579,10 +581,69 @@ class FabriqueEntrainementTest {
                 }
             }
             "q_double" -> {
-                val r = choisir(tous.filter { it.lieu.isNotBlank() }) ?: return null
-                return Tache(type, "demander, dans la même phrase, quand a lieu « ${titreDe(r)} » et où",
-                    json(listOf(mapOf("action" to "question", "sujet" to "quand", "id" to code(r)), mapOf("action" to "question", "sujet" to "ou", "id" to code(r)))),
-                    listOf(cle(r.titre), "quand|quel jour|quelle heure", "ou|adresse|lieu")) { a, res -> a == ag && res.dit.contains(quand(r)) && res.dit.contains(r.lieu) }
+                val r = choisir(tous.filter { it.lieu.isNotBlank() || it.avec.isNotEmpty() }) ?: return null
+                // (chaque sujet : ce qu'on demande, ses indices, ce que la réponse doit contenir)
+                val sujets = buildList {
+                    add(Triple("quand", "quand a lieu « ${titreDe(r)} »", "quand|quel jour|quelle heure|c'est quand"))
+                    if (r.lieu.isNotBlank()) add(Triple("ou", "où a lieu « ${titreDe(r)} »", "ou|adresse|lieu|endroit"))
+                    if (r.avec.isNotEmpty()) add(Triple("qui", "qui vient à « ${titreDe(r)} »", "qui|avec qui|personnes"))
+                }.shuffled(rnd).take(2)
+                if (sujets.size < 2) return null
+                fun contient(s: String, dit: String) = when (s) { "quand" -> dit.contains(quand(r)); "ou" -> dit.contains(r.lieu); else -> r.avec.all { dit.contains(it) } }
+                return Tache(type, "demander, dans la même phrase, ${sujets[0].second} et ${sujets[1].second.substringBefore(" «")}",
+                    json(sujets.map { mapOf("action" to "question", "sujet" to it.first, "id" to code(r)) }),
+                    listOf(cle(r.titre), sujets[0].third, sujets[1].third)) { a, res -> a == ag && sujets.all { contient(it.first, res.dit) } }
+            }
+            "c_complet" -> {
+                val (t, _) = nouveaux.random(rnd)
+                val d = auj.plusDays((1 + rnd.nextInt(30)).toLong())
+                val dit = when {
+                    d == auj.plusDays(1) -> "demain"
+                    d.isBefore(auj.plusDays(7)) -> jours[d.dayOfWeek.value - 1]
+                    else -> "le ${d.dayOfMonth} ${mois[d.monthValue - 1]}"
+                }
+                val h1 = LocalTime.of(8 + rnd.nextInt(13), listOf(0, 0, 30, 15).random(rnd))
+                val h2 = if (rnd.nextInt(3) == 0) h1.plusMinutes(listOf(60L, 90L, 120L).random(rnd)) else null
+                if (h2 != null && h2.isBefore(h1)) return null
+                val quandDit = if (h2 != null) "de ${h(h1)} à ${h(h2)}" else "à ${h(h1)}"
+                val action = mutableMapOf<String, Any>("action" to "creer", "phrase" to "$t $dit $quandDit")
+                val desc = StringBuilder("créer « $t » $dit $quandDit")
+                val ind = mutableListOf(sansAccents(t).split(' ', '\'').first { it.length > 2 }, "${h1.hour}")
+                // (deux à quatre détails à la fois, dans un ordre qui change)
+                val details = listOf("lieu", "personnes", "choses", "important", "rappel").shuffled(rnd).take(2 + rnd.nextInt(3))
+                val l = lieux.random(rnd)
+                val p = gens.shuffled(rnd).take(1 + rnd.nextInt(2))
+                val c = choses.shuffled(rnd).take(1 + rnd.nextInt(2))
+                for (x in details) when (x) {
+                    "lieu" -> { action["lieu"] = l; desc.append(if (l.first().isDigit()) ", au $l" else ", à $l"); ind += sansAccents(l.split(',')[0].split(' ').last()) }
+                    "personnes" -> { action["personnes"] = p; desc.append(", avec ${p.joinToString(" et ")}"); ind += sansAccents(p[0]) }
+                    "choses" -> { action["choses_a_prendre"] = c; desc.append(", il faudra apporter : ${c.joinToString(", ") { it.lowercase() }}"); ind += sansAccents(c[0]).split(' ').first() }
+                    "important" -> { action["important"] = true; desc.append(", c'est important"); ind += "important|urgent|priorit|crucial|essentiel|indispensable" }
+                    "rappel" -> { action["rappels"] = listOf("la veille"); desc.append(", avec un rappel la veille"); ind += "veille" }
+                }
+                desc.append(" (tous ces détails dans la même phrase)")
+                return Tache(type, desc.toString(), json(listOf(action)), ind) { a, _ ->
+                    a.filter { x -> ag.none { it.id == x.id } }.singleOrNull()?.let { r ->
+                        r.quand == d.atTime(h1) && (h2 == null || r.fin == d.atTime(h2)) &&
+                            ("lieu" !in details || r.lieu == l) && ("personnes" !in details || r.avec.containsAll(p)) &&
+                            ("choses" !in details || r.aPreparer.size == c.size) && ("important" !in details || r.important) &&
+                            ("rappel" !in details || r.rappels?.contains("veille") == true)
+                    } == true
+                }
+            }
+            "c_repet_plage" -> {
+                val (t, _) = nouveaux.random(rnd)
+                val j = DayOfWeek.entries.random(rnd)
+                val h1 = LocalTime.of(8 + rnd.nextInt(12), listOf(0, 30).random(rnd))
+                val h2 = h1.plusMinutes(listOf(60L, 90L, 120L).random(rnd))
+                if (h2.isBefore(h1)) return null
+                val dit = "tous les ${jours[j.value - 1]}s de ${h(h1)} à ${h(h2)}"
+                return Tache(type, "créer « $t » $dit", json(listOf(mapOf("action" to "creer", "phrase" to "$t $dit"))),
+                    listOf(sansAccents(t).split(' ', '\'').first { it.length > 2 }, jours[j.value - 1], "${h2.hour}")) { a, _ ->
+                    a.filter { x -> ag.none { it.id == x.id } }.singleOrNull()?.let { r ->
+                        r.laRepetition?.type == "semaine" && r.quand.toLocalTime() == h1 && r.fin?.toLocalTime() == h2
+                    } == true
+                }
             }
             "d_double" -> {
                 val r1 = choisir(horaire) ?: return null
