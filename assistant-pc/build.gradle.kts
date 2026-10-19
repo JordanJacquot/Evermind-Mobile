@@ -37,7 +37,9 @@ sourceSets {
     }
 }
 
-kotlin { jvmToolchain(25) }
+// (Java 21 : celle qu'Evermind PC télécharge avec l'assistant, Temurin)
+kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_21) } }
+java { targetCompatibility = JavaVersion.VERSION_21 }
 
 dependencies {
     implementation(libs.kotlinx.serialization.json)

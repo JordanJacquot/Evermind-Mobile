@@ -1229,7 +1229,10 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             if (ce.size == 1) return ce[0]
         }
         if (cibles.map { titreDe(it.rv) }.distinct().size == 1) {
-            return cibles.minByOrNull { agenda.prochaine(it.rv, maintenant) ?: LocalDateTime.MAX }
+            // (celui dont on vient de parler, sinon le prochain à venir ; un passé seulement s'il n'y en a pas d'autre)
+            cibles.firstOrNull { it.rv.id == memoire.dernier }?.let { return it }
+            val fois = cibles.map { it to (agenda.prochaine(it.rv, maintenant) ?: it.rv.quand) }
+            return fois.filter { !it.second.isBefore(maintenant) }.minByOrNull { it.second }?.first ?: fois.maxByOrNull { it.second }?.first
         }
         return null
     }

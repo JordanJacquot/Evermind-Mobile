@@ -74,7 +74,9 @@ ia = next((d for d in [os.environ.get("EVERMIND_IA", ""), os.path.expandvars(r"%
 if ia is None:
     sys.exit("llama-server.exe d'Evermind PC introuvable : donne son dossier dans EVERMIND_IA")
 serveur = os.path.join(ia, "llama-server.exe")
-modele = os.path.join(ia, "Qwen3-4B-Instruct-2507-Q4_K_M.gguf")
+# (le 4B est gardé avec les modèles entraînés : Evermind PC ne s'en sert plus et l'efface de son dossier)
+modele = next((m for m in [os.path.expandvars(r"%LOCALAPPDATA%\Evermind-entrainement\modeles\Qwen3-4B-Instruct-2507-Q4_K_M.gguf"),
+                           os.path.join(ia, "Qwen3-4B-Instruct-2507-Q4_K_M.gguf")] if os.path.exists(m)), None) or sys.exit("Qwen3 4B introuvable")
 port = 8098
 schema = {"type": "object", "properties": {"phrases": {"type": "array", "items": {"type": "string"}}}, "required": ["phrases"]}
 schema_juge = {"type": "object", "properties": {"ok": {"type": "array", "items": {"type": "boolean"}}}, "required": ["ok"]}

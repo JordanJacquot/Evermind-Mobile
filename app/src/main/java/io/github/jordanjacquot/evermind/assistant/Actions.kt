@@ -264,6 +264,8 @@ class Actions(
             if (pu.rappels != null && rappels == null) rappels = pu.rappels
             if (pu.lieu.isNotBlank() && lieu.isBlank()) lieu = pu.lieu
             if (pu.avec.isNotEmpty()) avec = (avec + pu.avec).filter { it.isNotBlank() }.distinct()
+                // (« Julie » de l'IA et « ma sœur Julie » de la phrase : une seule personne, Julie)
+                .let { l -> l.filter { x -> l.none { y -> y != x && sansAccents(x).contient("\\b" + Regex.escape(sansAccents(y)) + "\\b") } } }
             if (pu.aPreparer.isNotEmpty() && aPreparer.isEmpty()) aPreparer = pu.aPreparer
         }
         val titre = p.titre.ifEmpty { a.titre ?: "" }
