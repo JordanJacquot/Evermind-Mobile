@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Evermind"
 include(":app")
+include(":assistant-pc")

@@ -156,6 +156,8 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         t = t.remplace("^(?:(?:euh|bon|alors|donc|ok evermind|okay evermind|evermind|ok|okay|ben|bah|eh bien|genre|finalement|du coup|en fait|ouais|ouai|hmm+|hum|attends|bon ben|tiens|dis|voil[àa]|allez|bon allez|aller)\\s*,?\\s+)+", "")
             .remplace("\\s*,?\\s*\\b(?:s'il te pla[iî]t|s'il vous pla[iî]t|stp|svp|steuplait|merci)\\b\\s*", " ")
             .remplace("\\b(?:genre|euh|tu vois)\\b\\s*,?\\s*", "").trim().trimStart(',', ';', '.', ' ')
+            // « rappelle-moi le jour avant la soirée » : la veille
+            .remplace("\\b(?:le jour (?:d'avant|avant|pr[ée]c[ée]dent)|la journ[ée]e (?:d'avant|pr[ée]c[ée]dente))\\b", "la veille")
         // « dans l'agenda dentiste vendredi 10 h 30 » : la demande seule
         t = t.remplace("^(?:dans|sur) (?:l'|mon |ton )agenda\\s*,?\\s+(?=\\p{L})", "")
         // « c'est possible de créer des vacances … ? », « on peut avoir des vacances … ? » : une demande polie, pas une question
