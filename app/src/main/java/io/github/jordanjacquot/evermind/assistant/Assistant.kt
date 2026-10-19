@@ -137,7 +137,9 @@ class Assistant(
         if (!n.contient("\\b(?:euh|du coup|je voudrais|j'aimerais|je veux|tu pourrais|je pense|il faudrait|faudrait|faut que|parce que|je te demande|je me dis|genre|bon|alors|oui|ah)\\b")) return false
         val verbe = "(?:mets|met|ajoute|rajoute|supprime|efface|decale|deplace|rappelle|previens|marque|annule|enleve)"
         return !n.contient("\\b(?:la veille|le lendemain|avant|apres|meme jour|premier|premiere|deuxieme|troisieme|dernier|derniere|" +
-            "dans (?:\\d+|deux|trois|quatre|une|un) (?:semaines?|jours?|mois|heures?)|plus tot|plus tard|si je|si on|sauf|puis|ensuite|non,|en fait,|plutot)\\b|" +
+            "dans (?:\\d+|deux|trois|quatre|une|un) (?:semaines?|jours?|mois|heures?)|plus tot|plus tard|si je|si on|sauf|puis|ensuite|non,|en fait,|plutot|" +
+            // (les choses à prendre : le modèle en fait parfois une note)
+            "prenne|prendre|apporte|apporter|ramene|ramener|n'oublie pas)\\b|" +
             ",\\s*(?:et\\s+)?$verbe\\b|\\bet\\s+$verbe\\b|:")
     }
 
@@ -193,7 +195,9 @@ class Assistant(
         val nouveaux = apres.filter { it.id !in ids }
         nouveaux.firstOrNull { !titreDit(it.titre, texte) }?.let { return "titre inventé « ${it.titre} »" }
         val partis = avant.filter { a -> apres.none { it.id == a.id } }
-        if (partis.isNotEmpty() && !intentions(texte).supp && !texte.contient("\\b(?:annul|vire|enl[èe]v|retir|efface|d[ée]gage|plus besoin)")) return "suppression non demandée"
+        if (partis.isNotEmpty() && !intentions(texte).supp && !texte.contient("\\b(?:annul|vire|enl[èe]v|retir|efface|d[ée]gage|plus besoin)") &&
+            // (« je ne pourrai pas venir chez Max lundi » : il faut l'enlever)
+            !texte.contient("\\b(?:pourrai|pourrais|peux|pourra|serai|irai|vais|viendrai)\\s+pas\\s+(?:venir|y aller|aller|[eê]tre l[àa]|y [eê]tre)\\b|\\bne viendrai pas\\b")) return "suppression non demandée"
         // (jamais un rendez-vous que la phrase ne nomme pas, sauf « tout »)
         if (partis.any { !nomme(texte, it) } && !texte.contient("\\b(?:tout|tous|toutes|vide)\\b")) return "suppression d'un rendez-vous non nommé"
         if (changeRegles && !agendaDiffere(avant, apres)) return "rien fait"

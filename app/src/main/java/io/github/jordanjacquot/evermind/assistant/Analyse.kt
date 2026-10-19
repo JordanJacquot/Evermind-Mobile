@@ -63,7 +63,9 @@ fun titreDit(titre: String, texte: String): Boolean {
     val t = " " + sansAccents(texte) + " "
     val mots = tous(" " + sansAccents(titre) + " ", "[a-z]{3,}", ci = false).map { it.valeur }
         .filter { it !in setOf("anniversaire", "rendez", "vous", "avec", "chez", "des", "les", "une", "pour") }
-    return mots.isEmpty() || mots.all { t.contient("\\b$it") }
+    // (un mot changé sur trois ou plus : « Payer la facture d'électricité » pour « le paiement de la facture d'électricité »)
+    val dits = mots.count { t.contient("\\b$it") }
+    return mots.isEmpty() || dits == mots.size || (mots.size >= 3 && dits >= mots.size - 1)
 }
 
 /** Ce que contient un nom, pour le chercher dans une phrase sans majuscules ni accents. */
