@@ -75,6 +75,18 @@ class Cerveau(private val contexte: Context, private val portee: CoroutineScope,
     fun choisir(m: ModeleAssistant?) { _choisi.value = m; reglages.edit().putString("modele", m?.name).apply(); liberer(); preparer() }
     fun activer(oui: Boolean) { _actif.value = oui; reglages.edit().putBoolean("actif", oui).apply(); if (!oui) liberer() else preparer() }
 
+    /**
+     * Une nouvelle version du modèle (l'app mise à jour a effacé l'ancienne) : elle est téléchargée toute seule, en
+     * Wi-Fi seulement (640 Mo). En attendant, les règles d'Evermind répondent seules.
+     */
+    fun remplacerSiBesoin(installation: io.github.jordanjacquot.evermind.voix.Installation) {
+        val m = _choisi.value ?: return
+        if (Modeles.installe(contexte, m.pack)) return
+        val reseau = contexte.getSystemService(android.net.ConnectivityManager::class.java)
+        if (reseau.activeNetwork == null || reseau.isActiveNetworkMetered) return
+        installation.lancer(m.pack) { liberer(); preparer() }
+    }
+
     /** Prêt à répondre : installé, activé, et le téléphone sait le faire tourner. */
     val pret: Boolean
         get() {

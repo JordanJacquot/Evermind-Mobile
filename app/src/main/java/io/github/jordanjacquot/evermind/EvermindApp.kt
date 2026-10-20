@@ -49,7 +49,8 @@ class EvermindApp : Application() {
         Notifications.creerCanal(this)
         Planificateur.reprogrammer(this)
         // Les consignes de l'IA lues une fois pour toutes (si elle est installée et pas encore prête), sans gêner le lancement
-        portee.launch { kotlinx.coroutines.delay(15_000); cerveau.preparer() }
+        // (et une nouvelle version du modèle téléchargée toute seule, en Wi-Fi)
+        portee.launch { kotlinx.coroutines.delay(15_000); cerveau.remplacerSiBesoin(voix.installation); cerveau.preparer() }
         // Le lexique des noms (villes, métiers) prêt avant la première dictée
         portee.launch(kotlinx.coroutines.Dispatchers.Default) {
             val t0 = System.currentTimeMillis()

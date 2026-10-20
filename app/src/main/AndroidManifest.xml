@@ -5,6 +5,8 @@
          fixées) et à voir s'il existe une nouvelle version d'Evermind (la page des versions sur GitHub). Les
          rendez-vous, la voix et ce qui est dit restent sur le téléphone. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- (le Wi-Fi ou pas : le nouveau modèle de l'assistant, 640 Mo, ne se télécharge tout seul qu'en Wi-Fi) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Les mises à jour : Android demande toujours de confirmer l'installation -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Le micro, pour la dictée -->

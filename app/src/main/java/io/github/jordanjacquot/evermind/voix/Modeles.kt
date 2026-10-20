@@ -52,8 +52,8 @@ object Modeles {
         // (entraîné pour Evermind par outils/entrainer, publié dans les versions du projet)
         // (une nouvelle version du modèle a un nouveau nom de fichier : l'ancien est effacé, le nouveau est proposé)
         FichierModele(Pack.IA_EVERMIND, "assistant (Evermind 0.6B)",
-            "https://github.com/JordanJacquot/Evermind-Mobile/releases/download/assistant-v2/evermind-0.6b-v2-q8_0.gguf",
-            "040d7b5ce176b058a02d614161261b6ccac7af6ab702228bbce81adaf8f6e871", 639446912, Forme.FICHIER, "assistant/evermind-0.6b-v2-q8_0.gguf"),
+            "https://github.com/JordanJacquot/Evermind-Mobile/releases/download/assistant-v3/evermind-0.6b-v3-q8_0.gguf",
+            "ab12471564b38c32584081173729c5bc02f8f0eda493c673c44d34ece3a16068", 639446912, Forme.FICHIER, "assistant/evermind-0.6b-v3-q8_0.gguf"),
         FichierModele(Pack.EVEIL, "écoute de « OK Evermind » (Vosk)", "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip",
             "cabf6180e177eb9b3a9a9d43a437bd5e549f3a7d09525e5d69a3fed787be12ad", 42233323, Forme.ZIP, "vosk", temoin = "vosk/am/final.mdl"),
     )
