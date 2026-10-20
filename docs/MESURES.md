@@ -74,3 +74,11 @@ Une ligne par série, à chaque tour (`bash outils/mesurer.sh [modèle.gguf] [no
 | nuit4 | base4 | base | diagnostic | 154 / 154 (100 %) | 138 / 154 (89 %) | 154 / 154 (100 %) |
 | nuit4 | controle1-base | base | controle | 118 / 131 (90 %) | 120 / 131 (91 %) | 121 / 131 (92 %) |
 | nuit4 | controle1-complexe | complexe | controle | 110 / 165 (66 %) | 147 / 165 (89 %) | 136 / 165 (82 %) |
+| nuit5 | lots écrits à la main | base | — | 874 / 874 (100 %) | — | 874 / 874 (100 %) |
+| nuit5 | serie1 | complexe | diagnostic | 127 / 187 (67 %) | 161 / 187 (86 %) | 157 / 187 (83 %) |
+| nuit5 | base1 | base | diagnostic | 170 / 172 (98 %) | 152 / 172 (88 %) | 170 / 172 (98 %) |
+| nuit5 | base2 | base | diagnostic | 160 / 160 (100 %) | 147 / 160 (91 %) | 160 / 160 (100 %) |
+| nuit5 | base3 | base | diagnostic | 161 / 161 (100 %) | 143 / 161 (88 %) | 161 / 161 (100 %) |
+| nuit5 | base4 | base | diagnostic | 154 / 154 (100 %) | 137 / 154 (88 %) | 154 / 154 (100 %) |
+| nuit5 | controle1-base | base | controle | 118 / 131 (90 %) | 119 / 131 (90 %) | 122 / 131 (93 %) |
+| nuit5 | controle1-complexe | complexe | controle | 110 / 165 (66 %) | 152 / 165 (92 %) | 141 / 165 (85 %) |
