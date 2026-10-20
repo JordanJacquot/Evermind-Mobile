@@ -30,7 +30,7 @@ Le module `assistant-pc` compile les fichiers de l'app qui ne dépendent pas d'A
 
 ## Côté Evermind PC
 
-- Le pack « ia » contient : `llama-server` (llama.cpp), le modèle (`assistant-v2` de ce dépôt), Java (Temurin 21
+- Le pack « ia » contient : `llama-server` (llama.cpp), le modèle (`assistant-v3` de ce dépôt), Java (Temurin 21
   d'Adoptium) et ce programme. L'ancien Qwen3 4B (2,5 Go) est effacé.
 - `cerveau.ps1` lance le programme (`Start-Cerveau`), lui envoie la phrase et l'agenda (`Invoke-Commande`), puis
   remplace l'agenda par celui qu'il rend, après l'avoir mis de côté pour « annule » (`Invoke-ReponseAssistant`).
