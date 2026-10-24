@@ -479,7 +479,7 @@ private fun Saisie(
             alerte != null -> Text(alerte, color = c.mal, style = petit, modifier = marge)
             manque != null -> {
                 Text(manque.message, color = c.mal, style = petit, modifier = marge)
-                if (manque == Manque.HEURE || manque == Manque.JOUR || manque == Manque.QUAND) {
+                if (manque == Manque.HEURE || manque == Manque.JOUR || manque == Manque.QUAND || manque == Manque.MATIN) {
                     BoutonPilule("Compléter à la main", completer, Modifier.padding(top = 8.dp))
                 }
             }
@@ -494,6 +494,8 @@ private fun Saisie(
                     Icon(rdv.sorte.dessin, null, tint = rdv.sorte.teinte, modifier = Modifier.size(16.dp))
                     Text(" ${rdv.titre} : $quand$plus", color = c.p, style = petit)
                 }
+                // Jour de la semaine et date qui ne vont pas ensemble (« lundi 3 novembre ») : on dit le jour pris
+                lue?.remarque?.takeIf { it.isNotEmpty() }?.let { Text(it, color = c.mal, style = petit, modifier = marge) }
             }
             // Ce qu'il manque encore
             lue != null -> Text(lue.manque.message, color = c.discret, style = petit, modifier = marge)

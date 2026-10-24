@@ -40,6 +40,29 @@ internal val RxJour = "(?:" + JoursNoms.keys.joinToString("|") + ")"
 internal const val RxMinMot = "(?:cinq|dix|quinze|vingt|vingt-cinq|trente|trente-cinq|quarante|quarante-cinq|cinquante|cinquante-cinq)"
 internal const val RxFrac = "(?:et demie?|et quart|moins le quart|moins quart)"
 
+// Heures de 1 h à 6 h : ce qui se fait tôt le matin, et les départs (matin ou soir : on demande)
+internal const val RxTotMatin = "\\b(?:r[ée]veils?|r[ée]veiller|(?:me|se|nous|te)\\s+r[ée]veill\\w*|(?:me|se|nous|te)\\s+l[èe]v\\w*|lever|debout|t[ôo]t|de bonne heure|aube|aurore|petit[- ]d[ée]j\\w*|matinal\\w*)\\b"
+internal const val RxDepart = "\\b(?:a[ée]roport|avion|vol|d[ée]collage|embarquement|train|tgv|ter|gare|d[ée]part|partir|pars|taxi|navette|covoiturage|ferry|bateau)\\b"
+
+private const val RxCreneauMot = "(?:matin|journ|apr[èe]s|aprem|soir|nuit)"
+
+/**
+ * La phrase parle-t-elle de ses heures de travail (« je suis du matin », « poste du soir », « équipe de nuit ») ?
+ * Pas « aller à la poste », « réunion d'équipe », « réunion de service », « repas de travail » (Test-ParleTravail du PC).
+ * heure : en plus, ce qui dit le début ou la fin d'une journée de travail (« je commence à 6 h », « j'embauche à 5 h »).
+ */
+internal fun parleTravail(texte: String, heure: Boolean = false): Boolean {
+    var t = " " + texte.replace(Regex("[’‘`´]"), "'").lowercase() + " "
+    t = t.remplace("\\b(?:r[ée]unions?|repas|d[ée]jeuners?|d[îi]ners?|pots?|soir[ée]es?|f[êe]tes?|sorties?|s[ée]ances?|groupes?|points?|rendez-vous|rdv|entretiens?|s[ée]minaires?|formations?|chefs?|coll[èe]gues?|sports?|activit[ée]s?|v[êe]tements?|tenues?|chaussures?|sacs?|ordinateurs?|t[ée]l[ée]phones?|bureaux?|maillots?|matchs?|photos?)\\s+(?:de\\s+|d'|du\\s+)(?:l'|la\\s+|mon\\s+|ma\\s+|notre\\s+)?(?:travail|boulot|taf|[ée]quipe|service|bureau)\\b", " ")
+    t = t.remplace("\\b(?:la|une|des|aux?|bureaux? de|guichet de)\\s+postes?\\b|\\b[ée]quipe\\s+(?:de|d')\\s*(?:france|foot\\w*|basket|hand\\w*|rugby)\\b|\\bservices?\\s+(?:client|apr[èe]s[- ]vente|public|des\\s+\\w+|de\\s+(?!nuit|jour|matin|soir|l'|la\\s)\\w+)\\b", " ")
+    if (t.contient("\\b(?:travail\\w*|bosse\\w*|boulot|taf|shift|horaires?|planning)\\b") ||
+        t.contient("\\bje suis (?:du|de|d'|en) ?$RxCreneauMot") ||
+        t.contient("\\bpostes?\\s+(?:du\\s+|de\\s+|d'|en\\s+)?$RxCreneauMot") ||
+        t.contient("\\b(?:[ée]quipes?|services?)\\s+(?:du\\s+|de\\s+(?:la\\s+|l')?|d')$RxCreneauMot") ||
+        t.contient("\\b(?:mon|mes|ma)\\s+(?:postes?|[ée]quipes?|services?)\\b|\\bje suis (?:de|d'|en)\\s*(?:service|poste|[ée]quipe|garde)\\b")) return true
+    return heure && t.contient("\\b(?:j'embauche|je d[ée]bauche|je commence|je finis|je d[ée]bute|je prends mon poste)\\b")
+}
+
 // Ce qu'on dit autour du rendez-vous et qui n'en fait pas partie : politesse, demande, ordre
 internal const val RxPolitesse = "(?:(?:ok|okay|o\\.?k\\.?|hey|h[ée])[\\s,]*(?:[eé]ver\\s*-?\\s*m[aeiï]+n[de]?|[èe]ve|eva)\\b|euh+|alors|ok|okay|bon|dis|hey|evermind|s'il te pla[îi]t|s'il vous pla[îi]t|stp|svp|merci)"
 internal const val RxDemande = "(?:je dois|il faut que je|faut que je|j'ai besoin de|je ne dois pas oublier de|n'oublie pas que je dois|est-ce que tu (?:peux|pourrais|veux bien)|est-ce que je peux|tu (?:peux|pourrais|veux bien)|peux-tu|pourrais-tu|je (?:voudrais|veux|souhaite)|j'aimerais|il faut que tu|il faut|faut)"

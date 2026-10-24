@@ -5,6 +5,7 @@ import io.github.jordanjacquot.evermind.comprendre.RxMois
 import io.github.jordanjacquot.evermind.comprendre.contient
 import io.github.jordanjacquot.evermind.comprendre.jourSemaine
 import io.github.jordanjacquot.evermind.comprendre.lundiDe
+import io.github.jordanjacquot.evermind.comprendre.parleTravail
 import io.github.jordanjacquot.evermind.comprendre.tous
 import io.github.jordanjacquot.evermind.donnees.laRepetition
 import io.github.jordanjacquot.evermind.ui.enTexte
@@ -70,7 +71,8 @@ private class Morceau(val pos: Int, val fin: Int, val sorte: Char, val jours: Li
 fun horairesTravail(texte: String, maintenant: LocalDateTime, horaires: Map<String, String> = HorairesDefaut): List<Poste>? {
     val today = maintenant.toLocalDate()
     val t = " " + texte.replace('’', '\'').lowercase() + " "
-    if (!t.contient("\\b(?:travail\\w*|bosse\\w*|boulot|taf|poste|[ée]quipe|service|shift|horaires?|planning)\\b|\\bje suis (?:du|de|d'|en) ?(?:matin|journ|apr|aprem|soir|nuit)")) return null
+    // (« aller à la poste », « réunion d'équipe » : pas des horaires de travail)
+    if (!parleTravail(texte)) return null
     if (t.contient("\\b\\d{1,2}\\s*(?:h\\b|heures?\\b|h\\d{2}\\b|:\\d{2})")) return null
     val rxC = "(?:(?:du|de|en|le|la|l'|au|d')\\s*)?(?<c>matin(?:[ée]e)?s?|journ[ée]es?|apr[èe]s[- ]midis?|aprems?|soir(?:[ée]e)?s?|nuits?)\\b"
     val items = mutableListOf<Morceau>()

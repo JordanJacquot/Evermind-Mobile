@@ -21,6 +21,7 @@ enum class Manque(val code: String) {
     QUAND("quand"),    // ni le jour ni l'heure
     PASSE("passe"),    // ce moment est déjà passé
     INVALIDE("invalide"), // cette date n'existe pas (31 février...)
+    MATIN("matin"),    // une heure de 1 h à 6 h qui peut être le matin comme le soir (« à 6 h », « 5 h aéroport ») : on demande
 }
 
 /** Ce qui a été compris dans une phrase. */
@@ -48,6 +49,8 @@ data class Phrase(
     val jours: List<LocalDate>,
     /** Plusieurs semaines (« la première semaine des 3 prochains mois ») : un rendez-vous pour chacune. */
     val blocs: List<Bloc>,
+    /** Ce qu'il faut dire en plus (« Le 3 novembre est un mardi, pas un lundi : j'ai pris le lundi 2 novembre... »). */
+    val remarque: String = "",
 )
 
 private class Details {
@@ -62,6 +65,7 @@ private class Details {
     var nbJours: Int? = null
     var jours: List<LocalDate> = emptyList()
     var blocs: List<Bloc> = emptyList()
+    var remarque = ""
 }
 
 private class AgeDit(val n: Int, val futur: Boolean)
@@ -436,14 +440,22 @@ fun lirePhrase(texte: String, maintenant: LocalDateTime = LocalDateTime.now()): 
         }
     }
 
-    // 2. « dans 2 heures », « dans 30 minutes », « dans une demi-heure » : le moment exact
-    m = st.morceau("\\bdans\\s+(?:(?<n>$RxNombre)\\s+(?<u>heures?|h|minutes?|min)\\b|(?<dh>une demi[- ]heure)|(?<qh>un quart d'heure))")
+    // 2. « dans 2 heures », « dans 30 minutes », « dans une demi-heure » : le moment exact. Aussi les durées en deux
+    //    morceaux : « dans 1h30 », « dans 1 h 30 », « dans 2 heures et 10 minutes », « dans une heure et demie »
+    val rxMinDans = "(?:\\d{2}|\\d{1,2}(?=\\s*(?:minutes?|mn|min)\\b)|$RxMinMot)"
+    m = st.morceau("\\bdans\\s+(?:(?<n>$RxNombre)\\s*(?:heures?\\b|h(?![a-zà-ÿ]))(?:\\s*(?:et\\s+)?(?<m>$rxMinDans)(?:\\s*(?:minutes?|mn|min)\\b)?|\\s+(?<f>$RxFrac))?|(?<nm>$RxNombre)\\s*(?:minutes?|mn|min)\\b|(?<dh>une demi[- ]heure)|(?<qh>un quart d'heure)|(?<tq>(?:trois|3) quarts? d'heure|3/4 d'heure))")
     if (m.ok) {
         val e = when {
             m.a("dh") -> now.plusMinutes(30)
             m.a("qh") -> now.plusMinutes(15)
-            m.g("u")!!.contient("^h") -> now.plusHours((nombre(m.g("n")) ?: 0).toLong())
-            else -> now.plusMinutes((nombre(m.g("n")) ?: 0).toLong())
+            m.a("tq") -> now.plusMinutes(45)
+            m.a("n") -> {
+                val f = m.g("f")?.lowercase() ?: ""
+                val plus = m.g("m")?.let { nombre(it) ?: 0 }
+                    ?: when { f.contient("demi") -> 30; f.contient("et quart") -> 15; f.contient("moins") -> -15; else -> 0 }
+                now.plusHours((nombre(m.g("n")) ?: 0).toLong()).plusMinutes(plus.toLong())
+            }
+            else -> now.plusMinutes((nombre(m.g("nm")) ?: 0).toLong())
         }
         exact = e.truncatedTo(ChronoUnit.MINUTES)
     }
@@ -486,6 +498,34 @@ fun lirePhrase(texte: String, maintenant: LocalDateTime = LocalDateTime.now()): 
                 val dates = items.map { dateSure(anDe(it.mo, it.d, m.g("y")), it.mo, it.d) }
                 if (dates.any { it == null }) invalide = true
                 else jours = dates.filterNotNull().distinct().sorted()
+            } else if (st.morceau("(?<![\\p{L}'])(?:(?<ce>ce)\\s+)?$RxJour(?:\\s+prochain)?(?!\\s*\\d)(?:\\s*(?:,|\\bet\\b)\\s*(?:(?:ce|le)\\s+)?$RxJour(?:\\s+prochain)?(?!\\s*\\d))+\\b").also { m = it }.ok) {
+                // Des jours de la semaine dits ensemble, sans « tous les » : « samedi et dimanche », « lundi, mercredi et
+                // vendredi ». Chacun le prochain après celui d'avant (« vendredi et lundi » : le lundi d'après) ; « samedi »
+                // dit un samedi : celui d'après, « ce samedi » : aujourd'hui
+                val noms = tous(m.valeur.lowercase(), "\\b$RxJour", ci = false).map { JoursNoms.getValue(it.valeur) }
+                var d = when {
+                    st.s.contient("\\b(?:de\\s+)?la semaine prochaine\\b") -> today.plusDays((6 - ((today.jds + 6) % 7)).toLong())
+                    m.a("ce") -> today.minusDays(1)
+                    else -> today
+                }
+                jours = noms.map { w -> do { d = d.plusDays(1) } while (d.jds != w); d }
+            } else if (st.morceau("\\b(?:les?\\s+)(?<d>\\d{1,2}|1er)(?:er)?(?:\\s*(?:,|\\bet\\b)\\s*(?:le\\s+)?(?:\\d{1,2}|1er)(?:er)?)+\\b(?!\\s*(?:h(?![a-zà-ÿ])|heures?\\b|:|[/.]\\d|jours?\\b|semaines?\\b|mois\\b|ans?\\b|minutes?\\b|min\\b|$RxMois))").also { m = it }.ok) {
+                // « le 3 et le 10 », « les 27, 28 et 29 » sans le mois : le premier ce mois-ci (ou le suivant s'il est
+                // passé), chacun des autres le prochain après celui d'avant (« le 30 et le 2 » : le 2 du mois d'après)
+                var apres = today.minusDays(1)
+                val dates = tous(m.valeur, "\\d{1,2}").mapNotNull { x ->
+                    val dn = x.valeur.toInt()
+                    var c: LocalDate? = null
+                    for (k in 0..12) {
+                        val first = apres.premierDuMois.plusMonths(k.toLong())
+                        val y = dateSure(first.year, first.monthValue, dn)
+                        if (y != null && y.isAfter(apres)) { c = y; break }
+                    }
+                    if (c != null) apres = c
+                    c
+                }.distinct().sorted()
+                jours = dates
+                if (dates.isEmpty()) invalide = true
             }
         }
         if (!jours.isNullOrEmpty()) {
@@ -511,7 +551,10 @@ fun lirePhrase(texte: String, maintenant: LocalDateTime = LocalDateTime.now()): 
         }
     }
 
-    // 3. Jours relatifs
+    // 3. Jours relatifs. « mercredi en huit » : le mercredi de la semaine d'après ; « demain en quinze » : 2 semaines plus tard
+    var enHuit = 0
+    m = st.morceau("(?<=\\b(?:$RxJour|demain|aujourd'?\\s?hui)(?:\\s{1,9}prochain)?)\\s+en\\s+(?<n>huit|8|quinze|15)\\b(?!\\s*(?:jours?|h(?![a-zà-ÿ])|heures?)\\b)")
+    if (m.ok) enHuit = if (m.g("n")!!.contient("^(huit|8)$")) 7 else 14
     m = st.morceau("\\bdans\\s+(?<n>$RxNombre)\\s+(?<u>jours?|semaines?|mois|ans?)\\b")
     if (m.ok) {
         val n = (nombre(m.g("n")) ?: 0).toLong()
@@ -524,7 +567,9 @@ fun lirePhrase(texte: String, maintenant: LocalDateTime = LocalDateTime.now()): 
     // 4. Dates : « le 27/02 », « le 27 février 2027 », « vendredi 27 février », « le 27 »
     var wdx: String? = null
     if (date == null) {
+        // (« le 10.11 », « le 10-11-2026 » aussi, mais pas une heure : « à 10.30 »)
         m = st.morceau("\\b(?:le\\s+)?(?<d>\\d{1,2})/(?<mo>\\d{1,2})(?:/(?<y>\\d{2,4}))?\\b")
+        if (!m.ok) m = st.morceau("(?<!\\b(?:à|a|vers|de|pour)\\s{1,9}|[\\d.,]|\\d[.-]\\d{1,2}[.-])\\b(?:le\\s+)?(?<d>\\d{1,2})(?<sep>[.-])(?<mo>0?[1-9]|1[0-2])(?:\\k<sep>(?<y>\\d{4}|\\d{2}))?\\b(?![.,-]\\d)(?!\\s*(?:h(?![a-zà-ÿ])|heures?\\b|minutes?\\b|min\\b|jours?\\b|semaines?\\b|mois\\b|ans?\\b|€|euros?\\b|%|kg\\b|km\\b|litres?\\b))")
         if (!m.ok) m = st.morceau("\\b(?:(?:le|du|ce)\\s+)?(?:(?<wdx>$RxJour)\\s+)?(?<d>$RxNombre)\\s+(?<mo>$RxMois)(?:\\s+(?<y>\\d{4}))?\\b")
         if (m.ok) {
             wdx = m.g("wdx")
@@ -557,11 +602,22 @@ fun lirePhrase(texte: String, maintenant: LocalDateTime = LocalDateTime.now()): 
             }
         }
     }
-    // Jour de la semaine qui ne colle pas avec le numéro (« jeudi 13 » alors que le 13 est un mardi) : le jour de la semaine l'emporte
+    // Jour de la semaine qui ne colle pas avec le numéro (« jeudi 13 » alors que le 13 est un mardi) : ce jour de la semaine,
+    // le plus près de la date dite (« lundi 3 novembre » : lundi 2 novembre, pas lundi prochain), et on le dit
     val dateLue = date
     if (dateLue != null && wdx != null) {
         val wdv = jourSemaine(wdx)
-        if (dateLue.jds != wdv) date = today.plusDays((((wdv - today.jds) + 7) % 7).toLong())
+        if (dateLue.jds != wdv) {
+            var ecart = ((wdv - dateLue.jds) + 7) % 7
+            if (ecart > 3) ecart -= 7
+            var prise = dateLue.plusDays(ecart.toLong())
+            if (prise.isBefore(today)) prise = prise.plusDays(7)
+            date = prise
+            val fr = java.util.Locale.FRENCH
+            fun f(d: LocalDate, p: String) = d.format(java.time.format.DateTimeFormatter.ofPattern(p, fr))
+            det.remarque = "Le ${f(dateLue, "d MMMM").remplace("^1 ", "1er ")} est un ${f(dateLue, "EEEE")}, pas un ${wdx.lowercase()} : " +
+                "j'ai pris le ${f(prise, "EEEE d MMMM")}. Corrige si ce n'est pas le bon jour."
+        }
     }
 
     // 5. Jour de la semaine : « mardi », « mardi prochain », « ce samedi », « mercredi de la semaine prochaine »
@@ -577,17 +633,20 @@ fun lirePhrase(texte: String, maintenant: LocalDateTime = LocalDateTime.now()): 
                 date = lundi.plusDays(((w + 6) % 7).toLong())
             } else {
                 var ecart = ((w - today.jds) + 7) % 7
-                if (ecart == 0 && !m.a("ce")) ecart = 7   // « mardi » dit un mardi : celui d'après
+                if (ecart == 0 && !m.a("ce") && enHuit == 0) ecart = 7   // « mardi » dit un mardi : celui d'après
                 date = today.plusDays(ecart.toLong())
             }
         }
     } else if (semaineProchaine && date == null) {
         date = today.plusDays((7 - ((today.jds + 6) % 7)).toLong())   // lundi de la semaine prochaine
     }
+    if (enHuit != 0 && rep == null) date = date?.plusDays(enHuit.toLong())
 
     if (st.morceau("\\b(?:toute la journ[ée]e|la journ[ée]e enti[èe]re|journ[ée]e enti[èe]re)\\b").ok) journee = true
 
     // 6. Heure : « à midi et demi », « à 15 h 30 », « 15h30 », « à 3 h de l'après-midi », « quinze heures trente »
+    //    (et « à 10.30 », avec un point)
+    st.s = st.s.remplace("\\b(à|a|vers|pour)\\s+(\\d{1,2})\\.(\\d{2})\\b(?![.,]\\d)", "$1 $2 h $3")
     val rxQualif = "(?:\\s+(?<q>du matin|de l'apr[èe]s[- ]midi|de l'aprem|du soir|de la nuit))?"
     m = st.morceau("(?:\\b(?:à|a|vers|pour)\\s+)?(?<ce>\\bce\\s+)?(?<![-'\\w])(?<mm>midi|minuit)(?:\\s+(?<f>$RxFrac)|\\s*(?<m>\\d{2})\\b)?")
     if (m.ok) {
@@ -622,18 +681,30 @@ fun lirePhrase(texte: String, maintenant: LocalDateTime = LocalDateTime.now()): 
         periode = m.g("p")!!.lowercase()
         if (m.a("ce") && date == null) date = today
     }
+    // « cette nuit à 2 h », « dans la nuit » : la nuit qui vient (2 h reste 2 h ; 11 h devient 23 h)
+    if (periode == null && st.morceau("\\b(?:cette|dans la|en pleine)\\s+nuit(?:\\s+d[eu](?=\\s+$RxJour))?\\b").ok) periode = "nuit"
+    // « demain tôt à 5 h » : le matin (le mot ne reste pas dans le titre)
+    if (periode == null && heure != null && st.morceau("\\b(?:tr[èe]s\\s+)?(?:t[ôo]t(?:\\s+le\\s+matin)?|de bonne heure)\\b").ok) periode = "matin"
     if (periode == null && periodeRep != null) periode = periodeRep   // « tous les matins »
     val moment = if (!qualif.isNullOrEmpty()) qualif else periode
     val h0 = heure
+    var doute = false
     if (h0 != null) {
         val fh = finHeure
         // « 8 h » le soir ou l'après-midi veut dire 20 h ; sans précision, « à 3 h » pour un rendez-vous veut dire 15 h
-        if (moment != null && moment.contient("soir|midi|aprem") && heures(h0) < 12) heure = h0 + 720
+        if (moment != null && (moment.contient("soir|midi|aprem") || (moment.contient("nuit") && heures(h0) >= 8)) && heures(h0) < 12) heure = h0 + 720
         // (sauf dans une plage qui finit après 7 h, « de 6 h à 14 h », et pour le travail : « je commence à 6 h »)
         else if (moment.isNullOrEmpty() && heureChiffres && heures(h0) in 1..6 &&
                  !(fh != null && heures(fh) > heures(h0) && heures(fh) >= 7) &&
-                 !texte.contient("\\b(?:travail\\w*|bosse\\w*|boulot|taf|poste|[ée]quipe|embauche|je commence|je finis|je d[ée]bute|shift)\\b")) heure = h0 + 720
-    } else if (!moment.isNullOrEmpty()) {
+                 !parleTravail(texte, heure = true)) {
+            // Ce qui se fait tôt le matin (« réveil », « me lever », « tôt ») : le matin. Un départ (« aéroport », « train »)
+            // ou 6 h : le matin comme le soir sont possibles, on demande. Sinon, l'après-midi.
+            if (!texte.contient(RxTotMatin)) {
+                if (heures(h0) == 6 || texte.contient(RxDepart)) doute = true
+                else heure = h0 + 720
+            }
+        }
+    } else if (!moment.isNullOrEmpty() && moment != "nuit") {
         heure = when { moment.contient("matin") -> 540; moment.contient("midi|aprem") -> 840; else -> 1200 }
     }
 
@@ -682,6 +753,7 @@ fun lirePhrase(texte: String, maintenant: LocalDateTime = LocalDateTime.now()): 
     val res = Resultat(titre, date, if (journee) null else heure, sorte, journee)
     fun fini() = completer(res, det, finHeure, dureeMin, ageDit)
     if (invalide) { res.manque = Manque.INVALIDE; return fini() }
+    if (doute) { res.manque = Manque.MATIN; return fini() }   // « à 6 h » : du matin ou du soir ?
     val r = rep
     if (r != null) {
         val ex = exact
@@ -775,6 +847,7 @@ private fun completer(res: Resultat, det: Details, finHeure: Int?, dureeMin: Int
         aPreparer = det.aPreparer,
         jours = det.jours,
         blocs = det.blocs,
+        remarque = det.remarque,
     )
 }
 

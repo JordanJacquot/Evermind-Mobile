@@ -46,6 +46,7 @@ $export = {
             APreparer = @($p.APreparer | Where-Object { $_ })
             Jours = @($p.Jours | Where-Object { $_ } | ForEach-Object { ([datetime]$_).ToString('yyyy-MM-dd') })
             Blocs = @($p.Blocs | Where-Object { $_ } | ForEach-Object { ([datetime]$_.Debut).ToString('yyyy-MM-dd') + '/' + ([datetime]$_.Fin).ToString('yyyy-MM-dd') })
+            Remarque = [string]$p.Remarque
         })
     }
     @{ Maintenant = '2026-10-10T18:30'; Phrases = $sortie }

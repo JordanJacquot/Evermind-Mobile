@@ -23,6 +23,7 @@ val Manque.message: String
         Manque.QUAND -> "Il me manque le jour et l'heure. Ajoute par exemple « demain à 15 h »."
         Manque.PASSE -> "Ce moment est déjà passé. Choisis un autre jour ou une autre heure."
         Manque.INVALIDE -> "Cette date n'existe pas. Vérifie le jour et le mois."
+        Manque.MATIN -> "Le matin ou le soir ? Ajoute « du matin » ou « du soir » après l'heure."
     }
 
 /**

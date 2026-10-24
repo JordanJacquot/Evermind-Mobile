@@ -56,6 +56,7 @@ object ComparaisonPc {
                 compare("APreparer", pc.liste("APreparer").orEmpty(), k.aPreparer)
                 compare("Jours", pc.liste("Jours").orEmpty(), k.jours.map { it.toString() })
                 compare("Blocs", pc.liste("Blocs").orEmpty(), k.blocs.map { "${it.debut}/${it.fin}" })
+                compare("Remarque", pc.texte("Remarque").orEmpty(), k.remarque)
             }
             if (ecarts.isNotEmpty()) erreurs += "« $phrase »\n    " + ecarts.joinToString("\n    ")
         }

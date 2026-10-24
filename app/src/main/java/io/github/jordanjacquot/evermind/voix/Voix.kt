@@ -137,6 +137,7 @@ class Voix(private val contexte: Context, private val portee: CoroutineScope) {
             Manque.QUAND -> "Je n'ai pas compris le jour ni l'heure. Tu peux corriger dans Evermind."
             Manque.PASSE -> "Ce moment est déjà passé."
             Manque.INVALIDE -> "Cette date n'existe pas."
+            Manque.MATIN -> "Je ne sais pas si c'est le matin ou le soir. Tu peux le corriger dans Evermind."
             Manque.RIEN -> ""
         }
     }
