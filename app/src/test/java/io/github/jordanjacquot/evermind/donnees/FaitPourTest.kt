@@ -63,7 +63,7 @@ class FaitPourTest {
     @Test fun faitUneFoisNeCoupeQueCetteFois() {
         val r = reglagesSansAndroid()
         val de = maintenant.minusHours(1)
-        // (sorties la semaine dernière ; comme sur PC, une fois en retard plus ancienne serait cochée d'abord)
+        // (sorties la semaine dernière)
         val serie = poubelles.copy(faitPour = listOf("2026-10-06"))
         val avant = rappelsEntre(listOf(serie), de, de.plusDays(60), r)
         val fait = serie.avecFait(serie.foisAFaire(maintenant), true, maintenant.toLocalDate())
@@ -85,13 +85,26 @@ class FaitPourTest {
         val hier = avantHier.avecFait(LocalDateTime.of(2026, 10, 12, 21, 0), true, LocalDate.of(2026, 10, 13))
         assertEquals(LocalDateTime.of(2026, 10, 12, 21, 0), hier.foisAFaire(LocalDateTime.of(2026, 10, 13, 9, 0)))
         assertEquals(LocalDateTime.of(2026, 10, 13, 21, 0), hier.foisAFaire(LocalDateTime.of(2026, 10, 13, 20, 45)))
-        // jamais coché : la plus ancienne en retard sur son rythme (2 jours pour une chose de chaque jour), comme sur PC
-        assertEquals(LocalDateTime.of(2026, 10, 11, 21, 0), cachets.foisAFaire(LocalDateTime.of(2026, 10, 13, 9, 0)))
+        // jamais coché : la plus récente déjà commencée (choix de Jordan, comme sur PC), celui d'hier soir
+        assertEquals(LocalDateTime.of(2026, 10, 12, 21, 0), cachets.foisAFaire(LocalDateTime.of(2026, 10, 13, 9, 0)))
+        // à 20 h 45 (ce soir commence dans 15 min), jamais coché : celui de ce soir
+        assertEquals(LocalDateTime.of(2026, 10, 13, 21, 0), cachets.foisAFaire(LocalDateTime.of(2026, 10, 13, 20, 45)))
+        // à 20 h 15 (plus de 30 min avant) : encore celui d'hier soir, jamais celui de ce soir
+        assertEquals(LocalDateTime.of(2026, 10, 12, 21, 0), cachets.foisAFaire(LocalDateTime.of(2026, 10, 13, 20, 15)))
         // pas encore commencée : rien à cocher
         assertNull(cachets.foisAFaire(LocalDateTime.of(2026, 9, 30, 12, 0)))
         // les fois cochées de plus de 90 jours sont oubliées
         val vieux = hier.avecFait(LocalDateTime.of(2027, 2, 1, 21, 0), true, LocalDate.of(2027, 2, 1))
         assertEquals(listOf("2027-02-01"), vieux.faitPour)
+    }
+
+    /** Les poubelles du mardi, jamais cochées : dites le mardi soir ou le mercredi, c'est la fois de ce mardi. */
+    @Test fun laFoisLaPlusRecenteCommencee() {
+        assertEquals(LocalDateTime.of(2026, 10, 13, 19, 0), poubelles.foisAFaire(maintenant))
+        assertEquals(LocalDateTime.of(2026, 10, 13, 19, 0), poubelles.foisAFaire(LocalDateTime.of(2026, 10, 14, 10, 0)))
+        // ce mardi déjà coché : celle d'avant, pas encore cochée
+        val mardi = poubelles.avecFait(LocalDateTime.of(2026, 10, 13, 19, 0), true, maintenant.toLocalDate())
+        assertEquals(LocalDateTime.of(2026, 10, 6, 19, 0), mardi.foisAFaire(LocalDateTime.of(2026, 10, 14, 10, 0)))
     }
 
     @Test fun unRendezVousUniqueGardeFait() {

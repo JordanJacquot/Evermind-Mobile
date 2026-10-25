@@ -39,15 +39,14 @@ fun RendezVous.foisAvant(jusqua: LocalDateTime, jours: Int): List<LocalDateTime>
 
 /**
  * « C'est fait » dit sans date (Get-FoisAFaire) : seulement une fois déjà commencée (ou qui commence dans moins de
- * 30 minutes), jamais une fois à venir plus tard dans la journée. Parmi les fois en retard depuis la dernière cochée, la
- * plus ancienne. Rend cette fois, ou null si la chose n'a pas encore commencé.
+ * 30 minutes), jamais une fois à venir plus tard dans la journée. Parmi elles, la plus récente pas encore cochée (choix
+ * de Jordan, comme sur PC) : les cachets du soir dits faits à 9 h, ceux d'hier soir ; les poubelles du mardi dites
+ * mercredi, celles de mardi. Rend cette fois (la dernière commencée si tout est coché), ou null si rien n'a commencé.
  */
 fun RendezVous.foisAFaire(maintenant: LocalDateTime): LocalDateTime? {
     val fois = foisAvant(maintenant.plusMinutes(30), 0)
     if (fois.isEmpty()) return null
-    val apres = mutableListOf<LocalDateTime>()
-    for (q in fois) if (estFait(q)) apres.clear() else apres += q   // (pas cochées, après la dernière cochée)
-    return apres.firstOrNull() ?: fois.last()
+    return fois.lastOrNull { !estFait(it) } ?: fois.last()
 }
 
 /** « Pas encore fait » dit sans date : la dernière fois cochée parmi celles déjà commencées, ou null. */
