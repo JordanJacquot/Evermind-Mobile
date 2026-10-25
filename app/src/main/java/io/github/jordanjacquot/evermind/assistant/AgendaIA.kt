@@ -6,6 +6,7 @@ import io.github.jordanjacquot.evermind.comprendre.surPlusieursJours
 import io.github.jordanjacquot.evermind.comprendre.titreAffiche
 import io.github.jordanjacquot.evermind.donnees.RendezVous
 import io.github.jordanjacquot.evermind.donnees.Sorte
+import io.github.jordanjacquot.evermind.donnees.estFait
 import io.github.jordanjacquot.evermind.donnees.laRepetition
 import io.github.jordanjacquot.evermind.ui.enTexte
 import io.github.jordanjacquot.evermind.ui.enTexteLong
@@ -75,7 +76,7 @@ class AgendaIA(rendezVous: List<RendezVous>, val maintenant: LocalDateTime) {
         if (next == null || next.isBefore(depuis)) {
             if (surPlusieursJours(r.quand, r.fin, r.journee, r.repetition != null) && !r.fin!!.isBefore(depuis)) next = depuis.toLocalDate().atStartOfDay()
         }
-        if (next != null && !next.isBefore(depuis) && !r.fait) FoisIA(r, next) else null
+        if (next != null && !next.isBefore(depuis) && !r.estFait(next)) FoisIA(r, next) else null
     }.sortedBy { it.prochain }
 
     /** La prochaine fois à partir d'un moment (null s'il n'y en a plus) ; le rendez-vous lui-même s'il ne revient pas. */
@@ -86,7 +87,7 @@ class AgendaIA(rendezVous: List<RendezVous>, val maintenant: LocalDateTime) {
         val f = fin ?: debut.plusHours(1)
         return entre(debut.toLocalDate().atStartOfDay(), debut.toLocalDate().plusDays(1).atStartOfDay()).filter { x ->
             val finX = x.rv.fin?.let { x.prochain.plus(Duration.between(x.rv.quand, it)) } ?: x.prochain.plusHours(1)
-            x.rv.id != saufId && !x.rv.journee && !x.rv.fait && x.prochain.isBefore(f) && finX.isAfter(debut)
+            x.rv.id != saufId && !x.rv.journee && !x.rv.estFait(x.prochain) && x.prochain.isBefore(f) && finX.isAfter(debut)
         }
     }
 

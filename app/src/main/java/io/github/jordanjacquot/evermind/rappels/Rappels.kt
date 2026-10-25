@@ -4,6 +4,7 @@ import android.content.Context
 import io.github.jordanjacquot.evermind.comprendre.surPlusieursJours
 import io.github.jordanjacquot.evermind.donnees.RendezVous
 import io.github.jordanjacquot.evermind.donnees.Sorte
+import io.github.jordanjacquot.evermind.donnees.estFait
 import io.github.jordanjacquot.evermind.donnees.fois
 import io.github.jordanjacquot.evermind.ui.enTexte
 import io.github.jordanjacquot.evermind.ui.enTexteLong
@@ -69,18 +70,19 @@ data class RappelPrevu(val rendezVous: RendezVous, val fois: LocalDateTime, val 
 
 /**
  * Les rappels dont le moment tombe entre « de » (exclu) et « a » (compris), dans l'ordre.
- * Comme sur PC : rien pour un « À faire » déjà fait, seulement le premier jour d'un événement sur plusieurs jours,
+ * Comme sur PC : rien pour un « À faire » déjà fait (pour une chose qui revient, seulement la fois cochée), seulement le premier jour d'un événement sur plusieurs jours,
  * et pas de « matin même » après l'heure du rendez-vous (un rendez-vous à 7 h).
  */
 fun rappelsEntre(tous: List<RendezVous>, de: LocalDateTime, a: LocalDateTime, r: ReglagesRappels): List<RappelPrevu> {
     val liste = mutableListOf<RappelPrevu>()
     for (rdv in tous) {
-        if (rdv.fait) continue
+        if (rdv.repetition == null && rdv.fait) continue
         val codes = rdv.rappelsVoulus(r)
         if (codes.isEmpty()) continue
         // (les fois qui peuvent avoir un rappel dans la période : jusqu'à une semaine plus tard, le plus long rappel)
         for (f in rdv.fois(de.toLocalDate(), a.toLocalDate().plusDays(8))) {
             val debut = f.debut
+            if (rdv.estFait(debut)) continue
             if (rdv.repetition == null && surPlusieursJours(rdv.quand, rdv.fin, rdv.journee, false) && debut.toLocalDate() != rdv.quand.toLocalDate()) continue
             for (code in codes) {
                 val m = momentRappel(code, debut) ?: continue

@@ -24,10 +24,13 @@ class EvermindApp : Application() {
     val voix: Voix by lazy {
         Voix(this, portee).also { v -> v.motsAgenda = { depot.liste().flatMap { r -> listOf(r.titre, r.lieu) + r.avec } } }
     }
+    /** Ce que l'assistant change dans l'agenda, et « annule » (JournalAssistant). */
+    val journal: io.github.jordanjacquot.evermind.ui.agenda.JournalAssistant by lazy { io.github.jordanjacquot.evermind.ui.agenda.JournalAssistant(depot) }
     /** Les mises à jour d'Evermind (le bandeau de l'écran principal). */
     val maj: io.github.jordanjacquot.evermind.maj.MiseAJour by lazy { io.github.jordanjacquot.evermind.maj.MiseAJour(this, portee) }
     /** L'assistant (le modèle choisi selon la mémoire du téléphone), chargé seulement quand on lui parle. */
-    val cerveau: Cerveau by lazy { Cerveau(this, portee) { r -> r.rappelsVoulus(ReglagesRappels(this)) } }
+    private val cerveauPret = lazy { Cerveau(this, portee) { r -> r.rappelsVoulus(ReglagesRappels(this)) } }
+    val cerveau: Cerveau by cerveauPret
 
     /** Le thème choisi (Réglages) : neon, crepuscule, terminal, arcade ou rubis. */
     private val _theme by lazy { MutableStateFlow(getSharedPreferences("apparence", MODE_PRIVATE).getString("theme", "neon") ?: "neon") }
@@ -41,13 +44,26 @@ class EvermindApp : Application() {
     @Suppress("DEPRECATION")
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level >= TRIM_MEMORY_RUNNING_LOW) cerveau.liberer()
+        // (un réveil par une alarme n'a pas chargé l'assistant : rien à rendre)
+        if (level >= TRIM_MEMORY_RUNNING_LOW && cerveauPret.isInitialized()) cerveau.liberer()
     }
 
+    /**
+     * Tout démarrage de l'appli passe ici, y compris le réveil par une alarme de rappel ou par le redémarrage du
+     * téléphone : seulement les notifications et les rappels. La voix, l'IA et la mise à jour attendent l'écran.
+     */
     override fun onCreate() {
         super.onCreate()
         Notifications.creerCanal(this)
         Planificateur.reprogrammer(this)
+    }
+
+    private var ecranPrepare = false
+
+    /** L'écran d'Evermind s'ouvre (MainActivity) : la voix, l'IA et la mise à jour se préparent, une fois. */
+    fun preparerEcran() {
+        if (ecranPrepare) return
+        ecranPrepare = true
         // Les consignes de l'IA lues une fois pour toutes (si elle est installée et pas encore prête), sans gêner le lancement
         // (et une nouvelle version du modèle téléchargée toute seule, en Wi-Fi)
         portee.launch { kotlinx.coroutines.delay(15_000); cerveau.remplacerSiBesoin(voix.installation); cerveau.preparer() }

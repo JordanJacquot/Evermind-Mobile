@@ -15,6 +15,9 @@ import io.github.jordanjacquot.evermind.comprendre.trouve
 import io.github.jordanjacquot.evermind.donnees.APreparer
 import io.github.jordanjacquot.evermind.donnees.RendezVous
 import io.github.jordanjacquot.evermind.donnees.Sorte
+import io.github.jordanjacquot.evermind.donnees.avecFait
+import io.github.jordanjacquot.evermind.donnees.derniereFoisFaite
+import io.github.jordanjacquot.evermind.donnees.foisAFaire
 import io.github.jordanjacquot.evermind.donnees.laRepetition
 import io.github.jordanjacquot.evermind.ui.enTexte
 import io.github.jordanjacquot.evermind.ui.majuscule
@@ -27,8 +30,11 @@ import java.time.format.DateTimeFormatter
 // d'Evermind, jamais par un calcul de l'IA ; un rendez-vous à changer doit exister ; avant chaque changement, l'agenda
 // est mis de côté pour « annule ».
 
-/** Ce qu'Evermind a fait : ce qu'il dit, ce qu'il écrit, et la phrase à compléter s'il manquait quelque chose. */
-class Resultat(val dit: String, val ecrit: String, val aCorriger: String?, val change: Boolean)
+/**
+ * Ce qu'Evermind a fait : ce qu'il dit, ce qu'il écrit, et la phrase à compléter s'il manquait quelque chose.
+ * « change » : l'agenda rendu est à enregistrer (« annule » compris) ; « annulable » : le bandeau propose « Annuler ».
+ */
+class Resultat(val dit: String, val ecrit: String, val aCorriger: String?, val change: Boolean, val annulable: Boolean = change)
 
 private val JourLong = DateTimeFormatter.ofPattern("EEEE d MMMM", Fr)
 
@@ -80,6 +86,8 @@ class Actions(
         // (une question ne change rien à l'agenda)
         val change = actions.any { it.action != "annuler" && it.action != "question" }
         if (change) sauverAnnulation()
+        // « annule » remet l'agenda d'avant : c'est aussi un changement à enregistrer
+        var annule = false
         val inn = intentions(texte)
         // Beaucoup de suppressions d'un coup (« supprime tout ») : une seule phrase pour toutes
         val enGroupe = actions.count { it.action == "supprimer" && it.periode == null } >= 3
@@ -114,7 +122,7 @@ class Actions(
                     dits += d; ecrits += e
                 }
                 a.action == "annuler" -> {
-                    if (annuler()) { dits += "J'ai annulé ma dernière action."; ecrits += "Dernière action annulée." }
+                    if (annuler()) { annule = true; dits += "J'ai annulé ma dernière action."; ecrits += "Dernière action annulée." }
                     else { dits += "Il n'y a rien à annuler."; ecrits += "Rien à annuler." }
                 }
                 a.action == "question" -> {
@@ -148,12 +156,13 @@ class Actions(
                     }
                 }
                 a.action == "pasfait" -> {
-                    agenda.remplacer(rv.copy(fait = false))
+                    // Une chose qui revient : seulement la dernière fois cochée
+                    agenda.remplacer(rv.avecFait(rv.derniereFoisFaite(maintenant), false, today))
                     dits += "D'accord, $nom n'est pas encore fait."; ecrits += "Pas encore fait : $nom."
                 }
                 a.action == "dupliquer" -> {
                     // Une copie, avec tous ses détails, à une autre date
-                    val copie = rv.copy(id = java.util.UUID.randomUUID().toString(), fait = false, aPreparer = rv.aPreparer.map { it.copy(fait = false) },
+                    val copie = rv.copy(id = java.util.UUID.randomUUID().toString(), fait = false, faitPour = emptyList(), aPreparer = rv.aPreparer.map { it.copy(fait = false) },
                         cree = maintenant.truncatedTo(java.time.temporal.ChronoUnit.MINUTES))
                     agenda.ajouter(copie)
                     val r = modifier(copie, a)
@@ -161,8 +170,15 @@ class Actions(
                     dits += "C'est noté : $d (une copie de $nom)."; ecrits += "Copie de $nom : $e."
                 }
                 a.action == "fait" -> {
-                    agenda.remplacer(rv.copy(fait = true))
-                    dits += "Bien joué, $nom c'est fait."; ecrits += "Fait : $nom."
+                    // Une chose qui revient : la fois en cours ou la dernière en retard, jamais une fois à venir (comme sur PC)
+                    val fois = rv.foisAFaire(maintenant)
+                    if (rv.repetition != null && fois == null) {
+                        dits += "$nom n'a pas encore commencé, il n'y a rien à cocher."; ecrits += "Pas encore commencé : $nom."
+                    } else {
+                        agenda.remplacer(rv.avecFait(fois, true, today))
+                        val laFois = if (rv.repetition != null && fois != null) " (${quandRV(rv, fois, today)})" else ""
+                        dits += "Bien joué, $nom c'est fait."; ecrits += "Fait : $nom$laFois."
+                    }
                 }
                 a.action == "modifier" -> {
                     // « même heure » : seule la date change, quelle que soit l'heure que l'IA a cru lire
@@ -213,7 +229,7 @@ class Actions(
             val t = rep.reponse.ifBlank { "Je n'ai pas compris, tu peux reformuler ?" }
             dits += t; ecrits += t
         }
-        return Resultat(dits.distinct().joinToString(" "), ecrits.distinct().joinToString(" "), aCorriger, change)
+        return Resultat(dits.distinct().joinToString(" "), ecrits.distinct().joinToString(" "), aCorriger, change || annule, annulable = change)
     }
 
     /** Les détails compris dans une phrase (Get-DetailsPhrase). */

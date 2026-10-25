@@ -43,6 +43,7 @@ sealed interface Ajout {
 class AgendaViewModel(app: EvermindApp) : ViewModel() {
     private val depot: DepotRendezVous = app.depot
     private val cerveau = app.cerveau
+    private val journal = app.journal
     private val _reflechit = MutableStateFlow(false)
     /** L'assistant réfléchit à une demande. */
     val reflechit: StateFlow<Boolean> = _reflechit
@@ -96,9 +97,10 @@ class AgendaViewModel(app: EvermindApp) : ViewModel() {
     suspend fun traiter(phrase: String, parLaVoix: Boolean): Ajout {
         _reflechit.value = cerveau.avecIA
         try {
-            val r = cerveau.assistant.demander(phrase, depot.liste())
+            val recu = depot.liste()
+            val r = cerveau.assistant.demander(phrase, recu)
             if (r != null) {
-                if (r.first.change) depot.remplacerTout(r.second)
+                journal.appliquer(recu, r.first, r.second)
                 return Ajout.Repondu(r.first)
             }
         } finally {
@@ -111,10 +113,10 @@ class AgendaViewModel(app: EvermindApp) : ViewModel() {
         return ajouter(phrase)
     }
 
-    /** « Annuler » après une action de l'assistant : l'agenda revient comme avant. */
+    /** « Annuler » après une action de l'assistant : ce qu'il a changé revient comme avant. */
     fun annulerAssistant() {
         val avant = cerveau.assistant.annulerDerniere() ?: return
-        viewModelScope.launch { depot.remplacerTout(avant) }
+        viewModelScope.launch { if (!journal.defaire()) depot.appliquerDifferences(depot.liste(), avant) }
     }
 
     fun annuler(rdvs: List<RendezVous>) {

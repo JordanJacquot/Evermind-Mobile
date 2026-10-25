@@ -62,6 +62,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.jordanjacquot.evermind.EvermindApp
 import io.github.jordanjacquot.evermind.donnees.RendezVous
 import io.github.jordanjacquot.evermind.donnees.Sorte
+import io.github.jordanjacquot.evermind.donnees.estFait
+import io.github.jordanjacquot.evermind.donnees.foisAFaire
 import io.github.jordanjacquot.evermind.donnees.laRepetition
 import io.github.jordanjacquot.evermind.donnees.prochaineFoisDepuis
 import io.github.jordanjacquot.evermind.rappels.ReglagesRappels
@@ -79,12 +81,13 @@ import io.github.jordanjacquot.evermind.ui.theme.ev
 import io.github.jordanjacquot.evermind.ui.theme.teinte
 import io.github.jordanjacquot.evermind.ui.theme.traduire
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
 /** La fiche d'un rendez-vous, comme sur PC : l'en-tête aux couleurs de la sorte, puis chaque détail avec son icône. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun FicheEcran(id: String, retour: () -> Unit, modifier: () -> Unit) {
+fun FicheEcran(id: String, retour: () -> Unit, modifier: () -> Unit, fois: LocalDateTime? = null) {
     val app = LocalContext.current.applicationContext as EvermindApp
     val vm = viewModel(key = "fiche-$id") { FicheViewModel(app.depot, id) }
     val rdv by vm.rendezVous.collectAsStateWithLifecycle()
@@ -104,8 +107,11 @@ fun FicheEcran(id: String, retour: () -> Unit, modifier: () -> Unit) {
     ) { marges ->
         val r = rdv ?: return@Scaffold
         val couleur = r.sorte.teinte
-        // Pour un rendez-vous qui revient : la prochaine fois
-        val prochaine = r.prochaineFoisDepuis(LocalDate.now())?.debut ?: r.quand
+        // Pour un rendez-vous qui revient : la fois touchée dans l'agenda, sinon la prochaine
+        val prochaine = fois ?: r.prochaineFoisDepuis(LocalDate.now())?.debut ?: r.quand
+        // « C'est fait » d'une chose qui revient : la fois touchée, sinon celle en cours ou en retard (comme sur PC)
+        val laFois = fois ?: r.foisAFaire(LocalDateTime.now()) ?: prochaine
+        val faite = r.estFait(laFois)
         Column(
             verticalArrangement = Arrangement.spacedBy(14.dp),
             modifier = Modifier.fillMaxSize().padding(marges).padding(horizontal = 16.dp).verticalScroll(rememberScrollState()),
@@ -124,7 +130,7 @@ fun FicheEcran(id: String, retour: () -> Unit, modifier: () -> Unit) {
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = c.texte,
-                            textDecoration = if (r.fait) TextDecoration.LineThrough else null,
+                            textDecoration = if (faite) TextDecoration.LineThrough else null,
                         )
                         val jours = ChronoUnit.DAYS.between(LocalDate.now(), prochaine.toLocalDate())
                         val dans = when { jours == 0L -> "aujourd'hui"; jours == 1L -> "demain"; jours > 1 -> "dans $jours jours"; else -> null }
@@ -198,7 +204,7 @@ fun FicheEcran(id: String, retour: () -> Unit, modifier: () -> Unit) {
 
             // Les boutons, comme sur PC
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (r.sorte == Sorte.A_FAIRE) BoutonPilule(if (r.fait) "Pas encore fait" else "C'est fait ✓", vm::basculerFait, couleur = c.bien)
+                if (r.sorte == Sorte.A_FAIRE) BoutonPilule(if (faite) "Pas encore fait" else "C'est fait ✓", { vm.basculerFait(laFois) }, couleur = c.bien)
                 BoutonPilule("Dupliquer", { vm.dupliquer(retour) })
                 BoutonPilule("Supprimer", { confirmerSuppression = true }, couleur = c.mal)
                 BoutonAccent("Modifier", modifier)

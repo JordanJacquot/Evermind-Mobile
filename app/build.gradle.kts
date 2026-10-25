@@ -39,9 +39,14 @@ android {
     }
 
     buildTypes {
+        // La version publiée (outils/publier.sh) : pas « débogable », et signée ensuite par apksigner avec la clé de
+        // publication et sa lignée (rotation depuis l'ancienne clé de débogage, docs/CLE-DE-PUBLICATION.md). Aucune
+        // signature ici : Gradle rend app-release-unsigned.apk, et aucun mot de passe n'est écrit nulle part.
+        // Réduction du code (R8) coupée : la voix (sherpa-onnx par JNI, Vosk par JNA) n'a pas encore de règles « keep »
+        // vérifiées sur un téléphone ; l'activer seulement après ce test.
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -118,6 +123,7 @@ dependencies {
     implementation(libs.commons.compress)
 
     testImplementation(libs.junit)
+    testImplementation(libs.sqlite.jdbc)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
 }

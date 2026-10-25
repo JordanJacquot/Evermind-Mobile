@@ -34,6 +34,8 @@ kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version = "1.10.2" }
 androidx-room-common = { group = "androidx.room", name = "room-common", version.ref = "room" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+# Une vraie base SQLite dans les tests sur PC (la migration de la base), la même que celle qu'utilise Room pour vérifier ses requêtes
+sqlite-jdbc = { group = "org.xerial", name = "sqlite-jdbc", version = "3.41.2.2" }
 vosk-android = { group = "com.alphacephei", name = "vosk-android", version.ref = "vosk" }
 commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commonsCompress" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }

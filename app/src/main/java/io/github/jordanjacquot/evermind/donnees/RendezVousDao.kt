@@ -23,11 +23,10 @@ interface RendezVousDao {
     @Query("DELETE FROM rendez_vous WHERE id = :id")
     suspend fun supprimer(id: String)
 
-    /** L'agenda devient exactement cette liste (ce qui n'y est plus est supprimé). */
+    /** Seulement ce qui a changé, d'un seul coup : ces rendez-vous enregistrés, ceux-là supprimés. */
     @Transaction
-    suspend fun remplacerTout(liste: List<RendezVous>) {
-        val gardes = liste.map { it.id }.toSet()
-        for (r in liste()) if (r.id !in gardes) supprimer(r.id)
-        for (r in liste) enregistrer(r)
+    suspend fun appliquer(aEnregistrer: List<RendezVous>, aSupprimer: List<String>) {
+        for (id in aSupprimer) supprimer(id)
+        for (r in aEnregistrer) enregistrer(r)
     }
 }

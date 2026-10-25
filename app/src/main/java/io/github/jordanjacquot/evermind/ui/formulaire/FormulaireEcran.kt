@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.jordanjacquot.evermind.EvermindApp
+import io.github.jordanjacquot.evermind.comprendre.Repetition
 import io.github.jordanjacquot.evermind.donnees.Sorte
 import io.github.jordanjacquot.evermind.ui.theme.BoutonAccent
 import io.github.jordanjacquot.evermind.ui.theme.Etiquette
@@ -77,6 +78,7 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
     var choixJour by remember { mutableStateOf(false) }
     var choixHeure by remember { mutableStateOf(false) }
     var choixFin by remember { mutableStateOf(false) }
+    var choixJourFin by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -130,6 +132,16 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
             OutlinedButton(onClick = { choixJour = true }, modifier = Modifier.fillMaxWidth()) {
                 Text(majuscule(b.jour.enTexte()))
             }
+            // Sur plusieurs jours (des vacances du 20 au 27) : le dernier jour
+            OutlinedButton(onClick = { choixJourFin = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(b.jourFin?.takeIf { it.isAfter(b.jour) }?.let { "Jusqu'au ${it.enTexte()}" } ?: "Sur un seul jour")
+            }
+            Repetition.depuisJson(b.repetition)?.let { rep ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("↻ Revient " + rep.enTexte(), modifier = Modifier.weight(1f))
+                    TextButton(onClick = { vm.changer { it.copy(repetition = null) } }) { Text("Une seule fois") }
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Toute la journée", modifier = Modifier.weight(1f))
                 Switch(checked = b.journee, onCheckedChange = { v -> vm.changer { it.copy(journee = v) } })
@@ -140,10 +152,10 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
                         Text("À ${b.heure.enTexte()}")
                     }
                     OutlinedButton(onClick = { choixFin = true }, modifier = Modifier.weight(1f)) {
-                        Text(b.fin?.let { "Jusqu'à ${it.enTexte()}" } ?: "Heure de fin")
+                        Text(b.fin?.let { "Jusqu'à ${it.enTexte()}" + if (b.finUnAutreJour && b.jourFin == null) " (le lendemain)" else "" } ?: "Heure de fin")
                     }
                 }
-                if (b.fin?.isAfter(b.heure) == false) {
+                if (b.finComplete?.isAfter(b.debut) == false) {
                     Text("La fin doit être après le début.", color = MaterialTheme.colorScheme.error)
                 }
             }
@@ -199,12 +211,33 @@ fun FormulaireEcran(id: String?, jour: LocalDate?, phrase: String?, retour: () -
                 TextButton(onClick = {
                     etat.selectedDateMillis?.let { ms ->
                         val j = Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate()
-                        vm.changer { it.copy(jour = j) }
+                        vm.changerJour(j)
                     }
                     choixJour = false
                 }) { Text("OK") }
             },
             dismissButton = { TextButton(onClick = { choixJour = false }) { Text("Annuler") } },
+        ) { DatePicker(state = etat) }
+    }
+    if (choixJourFin) {
+        val etat = rememberDatePickerState(initialSelectedDateMillis = (b.jourFin ?: b.jour).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+        DatePickerDialog(
+            onDismissRequest = { choixJourFin = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    etat.selectedDateMillis?.let { ms ->
+                        val j = Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate()
+                        vm.changer { it.copy(jourFin = j.takeIf { d -> d.isAfter(it.jour) }) }
+                    }
+                    choixJourFin = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { vm.changer { it.copy(jourFin = null) }; choixJourFin = false }) { Text("Un seul jour") }
+                    TextButton(onClick = { choixJourFin = false }) { Text("Annuler") }
+                }
+            },
         ) { DatePicker(state = etat) }
     }
     if (choixHeure) {

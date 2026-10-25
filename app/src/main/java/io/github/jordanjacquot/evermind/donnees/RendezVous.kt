@@ -1,5 +1,6 @@
 package io.github.jordanjacquot.evermind.donnees
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
@@ -31,8 +32,10 @@ data class RendezVous(
     /** null : les rappels par défaut des réglages ; liste vide : aucun rappel. */
     val rappels: List<String>? = null,
     val important: Boolean = false,
-    /** Pour un « À faire » : terminé. */
+    /** Pour un « À faire » unique : terminé. Pour une chose qui revient, voir faitPour (fait reste à non). */
     val fait: Boolean = false,
+    /** Pour une chose qui revient : les fois faites (« yyyy-MM-dd »), comme FaitPour sur PC (Fait.kt). */
+    @ColumnInfo(defaultValue = "[]") val faitPour: List<String> = emptyList(),
     /** Année de naissance, pour donner l'âge d'un anniversaire. */
     val naissance: Int? = null,
     val cree: LocalDateTime = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES),

@@ -81,6 +81,7 @@ import io.github.jordanjacquot.evermind.comprendre.lirePhrase
 import io.github.jordanjacquot.evermind.comprendre.message
 import io.github.jordanjacquot.evermind.comprendre.versRendezVous
 import io.github.jordanjacquot.evermind.donnees.Fois
+import io.github.jordanjacquot.evermind.donnees.estFait
 import io.github.jordanjacquot.evermind.donnees.laRepetition
 import io.github.jordanjacquot.evermind.ui.enTexte
 import io.github.jordanjacquot.evermind.ui.majuscule
@@ -99,11 +100,12 @@ import io.github.jordanjacquot.evermind.ui.theme.traduire
 import io.github.jordanjacquot.evermind.voix.Dictee
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.YearMonth
 
 /** L'écran principal : le calendrier du mois, puis « À venir » ou les rendez-vous du jour choisi. */
 @Composable
-fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, completer: (String) -> Unit, reglages: () -> Unit) {
+fun AgendaEcran(ouvrirFiche: (String, LocalDateTime?) -> Unit, ajouter: (LocalDate?) -> Unit, completer: (String) -> Unit, reglages: () -> Unit) {
     val contexte = LocalContext.current
     val app = contexte.applicationContext as EvermindApp
     val vm = viewModel { AgendaViewModel(app) }
@@ -151,7 +153,7 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
                 focus.clearFocus()
                 scope.launch {
                     messages.currentSnackbarData?.dismiss()
-                    val choix = messages.showSnackbar(res.ecrit, if (res.change) "Annuler" else null, duration = SnackbarDuration.Long)
+                    val choix = messages.showSnackbar(res.ecrit, if (res.annulable) "Annuler" else null, duration = SnackbarDuration.Long)
                     if (choix == SnackbarResult.ActionPerformed) vm.annulerAssistant()
                 }
             }
@@ -271,7 +273,7 @@ fun AgendaEcran(ouvrirFiche: (String) -> Unit, ajouter: (LocalDate?) -> Unit, co
                 }
             }
             items(etat.liste, key = { "${it.rendezVous.id}/${it.debut}" }) { f ->
-                CarteRendezVous(f, onClick = { ouvrirFiche(f.rendezVous.id) })
+                CarteRendezVous(f, onClick = { ouvrirFiche(f.rendezVous.id, f.debut) })
             }
             item { Spacer(Modifier.height(24.dp)) }
         }
@@ -413,13 +415,13 @@ fun CarteRendezVous(f: Fois, onClick: () -> Unit) {
                     color = c.texte,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    textDecoration = if (rdv.fait) TextDecoration.LineThrough else null,
+                    textDecoration = if (rdv.estFait(f.debut)) TextDecoration.LineThrough else null,
                 )
                 Text(majuscule(rdv.quandEnTexte(f.debut, relatif = false)), style = MaterialTheme.typography.bodySmall, color = c.discret)
                 Row {
                     Text(relatif(f.debut.toLocalDate()), style = MaterialTheme.typography.bodySmall, color = c.p)
                     if (rdv.repetition != null) Text("   ↻ revient", style = MaterialTheme.typography.bodySmall, color = couleur)
-                    if (rdv.fait) Text("   ✓ fait", style = MaterialTheme.typography.bodySmall, color = c.bien)
+                    if (rdv.estFait(f.debut)) Text("   ✓ fait", style = MaterialTheme.typography.bodySmall, color = c.bien)
                 }
             }
         }

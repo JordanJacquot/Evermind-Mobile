@@ -88,6 +88,11 @@ class CatalogueAssistantTest {
             return if (heure == null) r.journee else r.quand.toLocalTime() == LocalTime.parse(heure)
         }
         val taille get() = agenda.size
+        /**
+         * « C'est fait » compris : un rendez-vous unique coché ; pour une chose qui revient, sa fois cochée (faitPour), ou,
+         * si elle n'a pas encore commencé (le loyer, dans 5 jours), Evermind le dit : comme sur PC, jamais une fois à venir.
+         */
+        fun fait(r: RendezVous) = r.fait || r.faitPour.isNotEmpty() || (r.repetition != null && dit.contains("pas encore commencé"))
         fun entre(a: LocalDate, b: LocalDate) = AgendaIA(agenda, maintenant).entre(a.atStartOfDay(), b.atStartOfDay())
     }
 
@@ -190,8 +195,8 @@ class CatalogueAssistantTest {
         cas("modifier", "Marque le dentiste comme important.") { rv("Dentiste")[0].important },
         cas("modifier", "Décade le foot à 20 h.") { jour(rv("Foot").firstOrNull(), foot, "20:00") },
         // --- Fait, annuler
-        cas("fait", "J'ai payé le loyer.") { rv("Payer le loyer")[0].fait },
-        cas("fait", "C'est bon, j'ai appelé maman.") { rv("Appeler maman")[0].fait },
+        cas("fait", "J'ai payé le loyer.") { fait(rv("Payer le loyer")[0]) },
+        cas("fait", "C'est bon, j'ai appelé maman.") { fait(rv("Appeler maman")[0]) },
         cas("annuler", "Supprime le foot.", "Annule.") { rv("Foot").isNotEmpty() },
         cas("annuler", "Crée un tennis demain à 10 h.", "Non, annule.") { rv("*ennis*").isEmpty() },
         cas("annuler", "Crée un tennis demain à 10 h.", "Finalement, efface-le.") { rv("*ennis*").isEmpty() },
@@ -291,9 +296,9 @@ class CatalogueAssistantTest {
         cas("modifier", "Le raid, une semaine sur deux.") { rep(rv("Raid avec les potes").firstOrNull())?.intervalle == 2 },
         cas("modifier", "Le raid s'arrête fin décembre.") { rep(rv("Raid avec les potes").firstOrNull())?.jusqua?.endsWith("-12-31") == true },
         // Fait, annuler
-        cas("fait", "C'est fait pour le loyer.") { rv("Payer le loyer")[0].fait },
-        cas("fait", "J'ai bien appelé maman.") { rv("Appeler maman")[0].fait },
-        cas("fait", "Le loyer est payé.") { rv("Payer le loyer")[0].fait },
+        cas("fait", "C'est fait pour le loyer.") { fait(rv("Payer le loyer")[0]) },
+        cas("fait", "J'ai bien appelé maman.") { fait(rv("Appeler maman")[0]) },
+        cas("fait", "Le loyer est payé.") { fait(rv("Payer le loyer")[0]) },
         cas("annuler", "Supprime le dentiste.", "Annule ce que tu viens de faire.") { rv("Dentiste").isNotEmpty() },
         cas("annuler", "Décale le foot à 21 h.", "Non, reviens en arrière.") { jour(rv("Foot").firstOrNull(), foot, "19:00") },
         cas("annuler", "Ajoute piscine demain à 8 h.", "Supprime-le.") { rv("*iscine*").isEmpty() },
@@ -391,7 +396,7 @@ class CatalogueAssistantTest {
         cas("plusieurs", "Supprime le coiffeur et le dentiste.") { rv("Coiffeur").isEmpty() && rv("Dentiste").isEmpty() && taille == 6 },
         cas("plusieurs", "Enlève la soirée chez Max et le foot.") { rv("Soirée chez Max").isEmpty() && rv("Foot").isEmpty() && taille == 6 },
         cas("plusieurs", "Décale le foot et le dentiste à 18 h.") { jour(rv("Foot").firstOrNull(), foot, "18:00") && jour(rv("Dentiste").firstOrNull(), dentiste, "18:00") },
-        cas("plusieurs", "J'ai payé le loyer et appelé maman.") { rv("Payer le loyer")[0].fait && rv("Appeler maman")[0].fait },
+        cas("plusieurs", "J'ai payé le loyer et appelé maman.") { fait(rv("Payer le loyer")[0]) && fait(rv("Appeler maman")[0]) },
         cas("désigner", "Supprime mon prochain rendez-vous.") { rv("Appeler maman").isEmpty() && taille == 7 },
         cas("désigner", "Décale le rendez-vous de 15 h à 16 h.") { jour(rv("Dentiste").firstOrNull(), dentiste, "16:00") },
         cas("désigner", "Annule le rendez-vous avec Tom.") { rv("Soirée chez Max").isEmpty() && taille == 7 },
@@ -410,7 +415,7 @@ class CatalogueAssistantTest {
         cas("oral", "Euh attends, le dentiste, en fait, tu peux le mettre jeudi plutôt, à la même heure ?") { jour(rv("Dentiste").firstOrNull(), prochain(JEU), "15:00") },
         cas("oral", "Alors, euh, le foot de ${nomJour(foot)}, ben finalement il est annulé.") { rv("Foot").isEmpty() && taille == 7 },
         cas("oral", "Ouais du coup tu me rajoutes Paul à la soirée chez Max, merci.") { "Paul" in rv("Soirée chez Max")[0].avec },
-        cas("oral", "Hmm, je crois que j'ai payé le loyer, ouais, marque-le comme fait.") { rv("Payer le loyer")[0].fait },
+        cas("oral", "Hmm, je crois que j'ai payé le loyer, ouais, marque-le comme fait.") { fait(rv("Payer le loyer")[0]) },
         cas("oral", "Attends attends, non, laisse le foot comme il est.") { taille == 8 && jour(rv("Foot").firstOrNull(), foot, "19:00") },
         cas("oral", "Ok Evermind, supprime le coiffeur.") { rv("Coiffeur").isEmpty() && taille == 7 },
         // Questions qui demandent de calculer
@@ -684,8 +689,8 @@ class CatalogueAssistantTest {
         cas("supprimer", "Supprime tout ce qui est passé.") { rv("Coiffeur").isEmpty() && taille == 7 },
         cas("supprimer", "Vide ma journée de demain.") { entre(lea, lea.plusDays(1)).none { it.rv.sorte != Sorte.ANNIV } && rv("Foot").isNotEmpty() },
         // C'est fait
-        cas("fait", "J'ai fini de payer le loyer.") { rv("Payer le loyer")[0].fait },
-        cas("fait", "Appeler maman : c'est fait.") { rv("Appeler maman")[0].fait },
+        cas("fait", "J'ai fini de payer le loyer.") { fait(rv("Payer le loyer")[0]) },
+        cas("fait", "Appeler maman : c'est fait.") { fait(rv("Appeler maman")[0]) },
         // Questions
         cas("question", "Où est-ce que je dois aller ${nomJour(dentiste)} ?") { taille == 8 && dit.contains("Lilas") },
         cas("question", "Qu'est-ce que je dois préparer pour la soirée chez Max ?") { taille == 8 && dit.contains("Soirée") },
@@ -739,7 +744,7 @@ class CatalogueAssistantTest {
         cas("changer", "La soirée chez Max se fera à Metz.") { rv("Soirée chez Max")[0].lieu.contains("Metz") },
         cas("supprimer", "Vide mon week-end.") { taille <= 8 },
         cas("supprimer", "Supprime le raid de la semaine prochaine et le foot.") { rv("Foot").isEmpty() && rv("Raid avec les potes").isNotEmpty() },
-        cas("fait", "Le loyer, c'est payé.") { rv("Payer le loyer")[0].fait },
+        cas("fait", "Le loyer, c'est payé.") { fait(rv("Payer le loyer")[0]) },
         cas("question", "Qu'est-ce que j'ai comme sport cette semaine ?") { taille == 8 && !dit.contains("Dentiste") },
         cas("question", "Quand est-ce que je vois Max ?") { taille == 8 && dit.contains("Soirée") },
         cas("question", "Où se passe la soirée chez Max ?") { taille == 8 && dit.isNotBlank() },
@@ -773,7 +778,7 @@ class CatalogueAssistantTest {
         cas("changer", "Ajoute aux courses du loyer... non, au dentiste : penser à la mutuelle.") { rv("Dentiste")[0].aPreparer.any { it.texte.contains("mutuelle", true) } || rv("Dentiste")[0].notes.contains("mutuelle") },
         cas("changer", "Le raid de demain commence plus tôt, à 20 h.") { val r = rv("Raid avec les potes")[0]; entre(lea, lea.plusDays(1)).any { it.rv.id == r.id && it.prochain.hour == 20 } },
         cas("changer", "Préviens-moi 30 minutes avant la soirée chez Max au lieu d'une heure.") { rv("Soirée chez Max")[0].rappels?.contains("m30") == true },
-        cas("changer", "Le loyer c'est fait pour ce mois-ci.") { rv("Payer le loyer")[0].fait || rep(rv("Payer le loyer")[0])?.sauf != null },
+        cas("changer", "Le loyer c'est fait pour ce mois-ci.") { fait(rv("Payer le loyer")[0]) || rep(rv("Payer le loyer")[0])?.sauf != null },
         cas("supprimer", "Retire tous les raids de décembre sauf celui de Noël.") { (rep(rv("Raid avec les potes").firstOrNull())?.sauf?.count { it.contains("-12-") } ?: 0) >= 3 },
         cas("supprimer", "Bon, le coiffeur c'est passé, tu peux l'effacer.") { rv("Coiffeur").isEmpty() && taille == 7 },
         cas("supprimer", "Je n'ai plus besoin du rendez-vous de ${nomJour(foot)} soir.") { rv("Foot").isEmpty() && taille == 7 },
@@ -832,8 +837,8 @@ class CatalogueAssistantTest {
         cas("supprimer", "Ajoute piscine demain à 8 h.", "Supprime le dernier rendez-vous que j'ai ajouté.") { taille == 8 && rv("Piscine").isEmpty() },
         cas("supprimer", "Supprime les rendez-vous du dentiste et du coiffeur.") { rv("Dentiste").isEmpty() && rv("Coiffeur").isEmpty() && taille == 6 },
         // Fait / pas fait
-        cas("fait", "Décoche le loyer, je ne l'ai pas encore payé.", ) { !rv("Payer le loyer")[0].fait },
-        cas("fait", "J'ai payé le loyer.", "Non en fait je ne l'ai pas payé.") { !rv("Payer le loyer")[0].fait },
+        cas("fait", "Décoche le loyer, je ne l'ai pas encore payé.", ) { !fait(rv("Payer le loyer")[0]) },
+        cas("fait", "J'ai payé le loyer.", "Non en fait je ne l'ai pas payé.") { !fait(rv("Payer le loyer")[0]) },
         // Questions pointues
         cas("question", "Qu'est-ce que j'ai entre ${nomJour(dentiste)} et ${nomJour(soiree)} ?") { taille == 8 && dit.contains("Dentiste") && dit.contains("Foot") },
         cas("question", "Combien de raids j'ai ce mois-ci ?") { taille == 8 && dit.contains(Regex("\\d")) },
@@ -924,7 +929,7 @@ class CatalogueAssistantTest {
         cas("supprimer", "Vire tout ce qui est prévu ${nomJour(foot)} soir.") { rv("Foot").isEmpty() && rv("Dentiste").isNotEmpty() },
         cas("supprimer", "Je n'ai plus de raid en novembre, enlève-les.") { (rep(rv("Raid avec les potes").firstOrNull())?.sauf?.count { it.contains("-11-") } ?: 0) >= 4 },
         cas("supprimer", "Le rendez-vous du dentiste est annulé, le cabinet est fermé.") { rv("Dentiste").isEmpty() },
-        cas("fait", "C'est bon j'ai appelé maman et payé le loyer.") { rv("Appeler maman")[0].fait && rv("Payer le loyer")[0].fait },
+        cas("fait", "C'est bon j'ai appelé maman et payé le loyer.") { fait(rv("Appeler maman")[0]) && fait(rv("Payer le loyer")[0]) },
         cas("question", "Qu'est-ce que je dois amener à la soirée chez Max ?") { taille == 8 && dit.isNotBlank() },
         cas("question", "C'est quoi mon programme pour le week-end ?") { taille == 8 && dit.isNotBlank() },
         cas("question", "À quelle heure je dois être chez le dentiste et c'est où ?") { taille == 8 && dit.contains("15") && dit.contains("Lilas") },
@@ -964,8 +969,8 @@ class CatalogueAssistantTest {
         cas("supprimer", "On arrête le raid pendant les vacances, supprime ceux de décembre.") { (rep(rv("Raid avec les potes").firstOrNull())?.sauf?.count { it.contains("-12-") } ?: 0) >= 4 || rep(rv("Raid avec les potes").firstOrNull())?.jusqua?.endsWith("-11-30") == true },
         cas("supprimer", "Retire Tom et Inès de la soirée chez Max, ils ne viennent pas.") { val a = rv("Soirée chez Max")[0].avec; "Tom" !in a && "Inès" !in a && "Max" in a },
         cas("supprimer", "Enlève le rappel de la veille pour l'anniversaire de Léa.") { rv("Anniversaire de Léa").isNotEmpty() && rv("Anniversaire de Léa")[0].rappels?.contains("veille") != true },
-        cas("fait", "Voilà, maman est appelée.") { rv("Appeler maman")[0].fait },
-        cas("fait", "Le loyer de ce mois est réglé.") { rv("Payer le loyer")[0].fait || rep(rv("Payer le loyer")[0])?.sauf != null },
+        cas("fait", "Voilà, maman est appelée.") { fait(rv("Appeler maman")[0]) },
+        cas("fait", "Le loyer de ce mois est réglé.") { fait(rv("Payer le loyer")[0]) || rep(rv("Payer le loyer")[0])?.sauf != null },
         cas("question", "Rappelle-moi ce que j'ai prévu avec Max.") { taille == 8 && dit.contains("Soirée") },
         cas("question", "Est-ce que je suis dispo ${nomJour(dentiste)} vers 15 h ?") { taille == 8 && dit.contains("Dentiste") },
         cas("question", "J'ai quoi d'important bientôt ?") { taille == 8 && dit.contains("Dentiste") },
@@ -1012,7 +1017,7 @@ class CatalogueAssistantTest {
         cas("supprimer", "Max a annulé sa soirée.") { rv("Soirée chez Max").isEmpty() },
         cas("supprimer", "Supprime les deux prochains raids.") { val r = rv("Raid avec les potes").firstOrNull(); r != null && entre(lea, lea.plusDays(1)).none { it.rv.id == r.id } && entre(lea.plusDays(7), lea.plusDays(8)).none { it.rv.id == r.id } },
         cas("supprimer", "Efface le coiffeur et tout ce qui est passé.") { rv("Coiffeur").isEmpty() && taille == 7 },
-        cas("fait", "J'ai bien payé le loyer ce mois-ci, tu peux le cocher.") { rv("Payer le loyer")[0].fait },
+        cas("fait", "J'ai bien payé le loyer ce mois-ci, tu peux le cocher.") { fait(rv("Payer le loyer")[0]) },
         cas("question", "J'ai le temps de faire un footing ${nomJour(foot)} avant le foot ?") { taille == 8 && dit.isNotBlank() },
         cas("question", "Dis-moi tout ce que je dois préparer cette semaine.") { taille == 8 && dit.contains("Ordonnance", true) },
         cas("question", "C'est quand déjà l'anniversaire de Léa, et elle aura quel âge ?") { taille == 8 && dit.contains("24") },
@@ -1052,7 +1057,7 @@ class CatalogueAssistantTest {
         cas("supprimer", "Supprime l'appel à maman, je l'ai vue ce matin.") { rv("Appeler maman").isEmpty() },
         cas("supprimer", "Annule tout ce que j'ai ${nomJour(soiree)}.") { rv("Soirée chez Max").isEmpty() && rv("Foot").isNotEmpty() },
         cas("supprimer", "Le raid de la semaine prochaine n'aura pas lieu.") { val r = rv("Raid avec les potes").firstOrNull(); r != null && entre(lea, lea.plusDays(1)).any { it.rv.id == r.id } },
-        cas("fait", "Maman, c'est fait, je l'ai appelée.") { rv("Appeler maman")[0].fait },
+        cas("fait", "Maman, c'est fait, je l'ai appelée.") { fait(rv("Appeler maman")[0]) },
         cas("question", "C'est quoi déjà le code du dentiste ?") { taille == 8 && dit.contains("4521B") },
         cas("question", "Qui va à la soirée chez Max à part moi ?") { taille == 8 && dit.contains("Inès") },
         cas("question", "J'ai combien de trucs ce week-end ?") { taille == 8 && dit.contains(Regex("\\d")) },
@@ -1098,9 +1103,9 @@ class CatalogueAssistantTest {
         cas("modifier", "Le loyer c'est le 1er du mois désormais.") { rep(rv("Payer le loyer").firstOrNull())?.jour == 1 },
         cas("modifier", "Le raid passe à 22 h.") { val r = rv("Raid avec les potes")[0]; r.quand.hour == 22 && rep(r)?.type == "semaine" },
         cas("modifier", "Déplace le dentiste au même jour la semaine prochaine.") { jour(rv("Dentiste").firstOrNull(), dentiste.plusDays(7), "15:00") || taille == 8 },
-        cas("fait", "J'ai appelé maman.") { rv("Appeler maman")[0].fait },
-        cas("fait", "Loyer payé.") { rv("Payer le loyer")[0].fait || taille == 8 },
-        cas("fait", "Marque le loyer comme fait.") { rv("Payer le loyer")[0].fait },
+        cas("fait", "J'ai appelé maman.") { fait(rv("Appeler maman")[0]) },
+        cas("fait", "Loyer payé.") { fait(rv("Payer le loyer")[0]) || taille == 8 },
+        cas("fait", "Marque le loyer comme fait.") { fait(rv("Payer le loyer")[0]) },
         cas("annuler", "Supprime le foot.", "Annule ça.") { rv("Foot").isNotEmpty() },
         cas("annuler", "Mets le dentiste à 17 h.", "Annule.") { jour(rv("Dentiste").firstOrNull(), dentiste, "15:00") },
         cas("annuler", "Ajoute badminton jeudi à 18 h.", "Efface-le.") { rv("*adminton*").isEmpty() },
@@ -1213,8 +1218,8 @@ class CatalogueAssistantTest {
         "s5" to { rep(rv("Raid avec les potes").firstOrNull())?.jusqua?.endsWith("-12-31") == true },
         "s6" to { entre(lea, lea.plusDays(1)).none { it.rv.sorte != Sorte.ANNIV } && rv("Foot").isNotEmpty() },
         "s7" to { rv("Soirée chez Max").isEmpty() && taille == 7 },
-        "f1" to { rv("Payer le loyer")[0].fait },
-        "f2" to { rv("Appeler maman")[0].fait },
+        "f1" to { fait(rv("Payer le loyer")[0]) },
+        "f2" to { fait(rv("Appeler maman")[0]) },
         "q1" to { taille == 8 && dit.contains(Regex("Léa|raid", RegexOption.IGNORE_CASE)) },
         "q2" to { taille == 8 && (dit.contains("${dentiste.dayOfMonth}") || dit.contains(nomJour(dentiste), true)) },
         "q3" to { taille == 8 && dit.contains("Lilas") },

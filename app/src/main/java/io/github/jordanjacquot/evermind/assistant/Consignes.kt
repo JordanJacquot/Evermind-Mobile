@@ -1,5 +1,6 @@
 package io.github.jordanjacquot.evermind.assistant
 
+import io.github.jordanjacquot.evermind.donnees.estFait
 import io.github.jordanjacquot.evermind.donnees.laRepetition
 import io.github.jordanjacquot.evermind.ui.enTexte
 
@@ -66,7 +67,7 @@ object Consignes {
             if (r.aPreparer.isNotEmpty()) l.append(". À prendre : ${r.aPreparer.joinToString(", ") { a -> a.texte }}")
             if (r.notes.isNotBlank()) l.append(". Notes : ${r.notes.replace(Regex("\\s+"), " ")}")
             if (r.important) l.append(". Important")
-            if (r.fait) l.append(". Déjà fait")
+            if (r.estFait(it.prochain)) l.append(". Déjà fait")
             lignes += l.toString()
         }
         if (lignes.isEmpty()) lignes += "(son agenda est vide)"

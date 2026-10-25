@@ -51,6 +51,8 @@ data class Phrase(
     val blocs: List<Bloc>,
     /** Ce qu'il faut dire en plus (« Le 3 novembre est un mardi, pas un lundi : j'ai pris le lundi 2 novembre... »). */
     val remarque: String = "",
+    /** La répétition lue, même s'il manque quelque chose (« Compléter » la garde) ; repetition seulement quand tout y est. */
+    val repetitionLue: Repetition? = repetition,
 )
 
 private class Details {
@@ -751,7 +753,18 @@ fun lirePhrase(texte: String, maintenant: LocalDateTime = LocalDateTime.now()): 
     val depuis = if (journee) today.atStartOfDay() else now
 
     val res = Resultat(titre, date, if (journee) null else heure, sorte, journee)
-    fun fini() = completer(res, det, finHeure, dureeMin, ageDit)
+    // La répétition lue, rangée comme pour un rendez-vous complet, même s'il manque l'heure (« Compléter » la garde)
+    fun repetitionLue(): Repetition? {
+        val r = rep?.copy() ?: return null
+        val ref = date ?: exact?.toLocalDate() ?: today
+        when (r.type) {
+            "semaine" -> if (r.jour == null) r.jour = wd ?: ref.jds
+            "mois" -> if ((r.rang ?: 0) == 0 && (r.jour ?: 0) == 0) r.jour = ref.dayOfMonth
+            "an" -> { if (date == null && r.mois == null) return null; if (r.mois == null) { r.jour = ref.dayOfMonth; r.mois = ref.monthValue } }
+        }
+        return r
+    }
+    fun fini() = completer(res, det, finHeure, dureeMin, ageDit).let { p -> if (p.repetition == null) p.copy(repetitionLue = repetitionLue()) else p }
     if (invalide) { res.manque = Manque.INVALIDE; return fini() }
     if (doute) { res.manque = Manque.MATIN; return fini() }   // « à 6 h » : du matin ou du soir ?
     val r = rep

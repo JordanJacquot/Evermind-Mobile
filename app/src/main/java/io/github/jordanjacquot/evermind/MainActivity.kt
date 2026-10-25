@@ -25,6 +25,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge(SystemBarStyle.dark(android.graphics.Color.TRANSPARENT), SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         if (savedInstanceState == null) ficheDemandee = intent.getStringExtra(Notifications.EXTRA_FICHE)
         val app = application as EvermindApp
+        // (seulement maintenant : un réveil par une alarme ne charge ni la voix ni l'IA)
+        app.preparerEcran()
         setContent {
             val theme by app.theme.collectAsStateWithLifecycle()
             EvermindTheme(theme) {

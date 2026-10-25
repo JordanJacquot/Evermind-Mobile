@@ -18,8 +18,17 @@ class DepotRendezVous(private val dao: RendezVousDao, private val apresChangemen
         apresChangement()
     }
 
-    suspend fun remplacerTout(liste: List<RendezVous>) {
-        dao.remplacerTout(liste)
+    /**
+     * Les différences entre deux agendas (ajouts, rendez-vous changés, suppressions), appliquées sur l'agenda actuel
+     * dans une seule transaction, comme Merge-AgendaAssistant sur PC : ce qui a changé à côté entre-temps reste.
+     */
+    suspend fun appliquerDifferences(avant: List<RendezVous>, apres: List<RendezVous>) {
+        val avantParId = avant.associateBy { it.id }
+        val restent = apres.map { it.id }.toSet()
+        val aEnregistrer = apres.filter { avantParId[it.id] != it }
+        val aSupprimer = avant.map { it.id }.filter { it !in restent }
+        if (aEnregistrer.isEmpty() && aSupprimer.isEmpty()) return
+        dao.appliquer(aEnregistrer, aSupprimer)
         apresChangement()
     }
 

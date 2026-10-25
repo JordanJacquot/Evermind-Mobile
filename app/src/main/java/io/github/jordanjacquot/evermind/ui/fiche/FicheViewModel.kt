@@ -4,10 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.jordanjacquot.evermind.donnees.DepotRendezVous
 import io.github.jordanjacquot.evermind.donnees.RendezVous
+import io.github.jordanjacquot.evermind.donnees.avecFait
+import io.github.jordanjacquot.evermind.donnees.estFait
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
 
 class FicheViewModel(private val depot: DepotRendezVous, private val id: String) : ViewModel() {
     val rendezVous: StateFlow<RendezVous?> = depot.rendezVous(id)
@@ -21,16 +24,17 @@ class FicheViewModel(private val depot: DepotRendezVous, private val id: String)
         viewModelScope.launch { depot.enregistrer(rdv.copy(aPreparer = liste)) }
     }
 
-    fun basculerFait() {
+    /** « C'est fait » / « Pas encore fait » : pour une chose qui revient, seulement cette fois-là (comme sur PC). */
+    fun basculerFait(fois: LocalDateTime) {
         val rdv = rendezVous.value ?: return
-        viewModelScope.launch { depot.enregistrer(rdv.copy(fait = !rdv.fait)) }
+        viewModelScope.launch { depot.enregistrer(rdv.avecFait(fois, !rdv.estFait(fois))) }
     }
 
     /** Une copie de ce rendez-vous (à modifier ensuite), comme « Dupliquer » sur PC. */
     fun dupliquer(ensuite: () -> Unit) {
         val rdv = rendezVous.value ?: return
         viewModelScope.launch {
-            depot.enregistrer(rdv.copy(id = java.util.UUID.randomUUID().toString(), cree = java.time.LocalDateTime.now().withSecond(0).withNano(0)))
+            depot.enregistrer(rdv.copy(id = java.util.UUID.randomUUID().toString(), fait = false, faitPour = emptyList(), cree = java.time.LocalDateTime.now().withSecond(0).withNano(0)))
             ensuite()
         }
     }

@@ -14,6 +14,8 @@ import io.github.jordanjacquot.evermind.comprendre.tous
 import io.github.jordanjacquot.evermind.comprendre.trouve
 import io.github.jordanjacquot.evermind.donnees.RendezVous
 import io.github.jordanjacquot.evermind.donnees.Sorte
+import io.github.jordanjacquot.evermind.donnees.estFait
+import io.github.jordanjacquot.evermind.donnees.foisAFaire
 import io.github.jordanjacquot.evermind.donnees.laRepetition
 import io.github.jordanjacquot.evermind.ui.enTexte
 import io.github.jordanjacquot.evermind.ui.enTexteLong
@@ -1263,7 +1265,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             val minute = h.g("mi")?.toInt() ?: 0
             val ce = agenda.liste.filter { r ->
                 val q = agenda.prochaine(r, today.atStartOfDay()) ?: r.quand
-                !r.journee && !r.fait && q.hour == heure && q.minute == minute
+                !r.journee && !r.estFait(q) && q.hour == heure && q.minute == minute
             }
             if (ce.size > 1) { ambigus = ce; return null }
             val r = ce.singleOrNull() ?: return null
@@ -1680,7 +1682,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
         if (s.contient("\\bprochain (?:jour|soir|week-end) (?:libre|sans rien|de libre|tranquille|vide)\\b|\\bquand (?:est-ce que )?je suis libre\\b")) {
             var j = today.plusDays(1)
             for (k in 0 until 90) {
-                if (agenda.entre(j.atStartOfDay(), j.plusDays(1).atStartOfDay()).none { !it.rv.fait && it.rv.sorte != Sorte.ANNIV }) return "Ton prochain jour libre : ${j.enTexte(today)}."
+                if (agenda.entre(j.atStartOfDay(), j.plusDays(1).atStartOfDay()).none { !it.rv.estFait(it.prochain) && it.rv.sorte != Sorte.ANNIV }) return "Ton prochain jour libre : ${j.enTexte(today)}."
                 j = j.plusDays(1)
             }
             return "Tu n'as pas de jour libre dans les trois prochains mois."
@@ -1734,7 +1736,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             val m = x.g("m")!!
             val j = when (m) { "veille" -> f.toLocalDate().minusDays(1); "lendemain" -> f.toLocalDate().plusDays(1); else -> f.toLocalDate() }
             val moment = when (m) { "soir" -> "soir"; "matin" -> "matin"; "apres-midi" -> "apres-midi"; else -> null }
-            val fois = agenda.entre(j.atStartOfDay(), j.plusDays(1).atStartOfDay()).filter { it.rv.id != c.rv.id && !it.rv.fait }
+            val fois = agenda.entre(j.atStartOfDay(), j.plusDays(1).atStartOfDay()).filter { it.rv.id != c.rv.id && !it.rv.estFait(it.prochain) }
                 .filter { fo -> moment == null || (!fo.rv.journee && fo.prochain.hour.let { h -> when (moment) { "soir" -> h >= 17; "matin" -> h < 12; else -> h in 12..17 } }) }
             val quand = "${j.enTexte(today).replaceFirstChar { it.uppercase() }}${if (moment != null) " $moment" else ""}"
             return if (fois.isEmpty()) "$quand, tu n'as rien d'autre de prévu." else "$quand : ${liste(fois.map { ligne(it, false) })}."
@@ -1812,11 +1814,11 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             }
             // « Est-ce que j'ai déjà payé le loyer ? »
             s.contient("\\b(?:deja|bien)\\b.*\\b(?:paye|fait|appele|envoye|regle|achete|rendu|pris)\\b|\\bc'est fait\\b|\\best (?:deja )?fait\\b") ->
-                if (rv.fait) "Oui, $nom est fait." else "Non, $nom n'est pas encore fait ($quand)."
+                if (rv.estFait(rv.foisAFaire(maintenant))) "Oui, $nom est fait." else "Non, $nom n'est pas encore fait ($quand)."
             // « J'ai quoi après le dentiste ? »
             s.contient("\\bapres\\b") && s.contient("\\b(?:quoi|qu'est-ce|ensuite|suite|suivant)\\b") -> {
                 val finFois = duree?.let { fois.plus(it) } ?: fois.plusMinutes(1)
-                val suite = agenda.entre(finFois, finFois.plusDays(31)).firstOrNull { it.rv.id != rv.id && !it.rv.fait }
+                val suite = agenda.entre(finFois, finFois.plusDays(31)).firstOrNull { it.rv.id != rv.id && !it.rv.estFait(it.prochain) }
                 if (suite == null) "Après $nom, tu n'as rien de prévu pour l'instant." else "Après $nom, tu as ${titreDe(suite.rv)}, ${quandRV(suite.rv, suite.prochain, today)}."
             }
             s.contient("\\bimportante?\\b") -> if (rv.important) "Oui, $nom est marqué important." else "Non, $nom n'est pas marqué important."
@@ -1904,7 +1906,7 @@ class Ordres(private val agenda: AgendaIA, private val memoire: MemoireOrdres, p
             val l = agenda.entre(debut.atStartOfDay(), fin.plusDays(1).atStartOfDay()).map { it.rv }.distinctBy { it.id }.filter { it.aPreparer.any { a -> !a.fait } }
             return if (l.isEmpty()) "$nom, rien à préparer." else "$nom, à préparer : " + l.joinToString(" ; ") { r -> "${titreDe(r)} : ${liste(r.aPreparer.filter { !it.fait }.map { it.texte })}" } + "."
         }
-        var fois = agenda.entre(debut.atStartOfDay(), fin.plusDays(1).atStartOfDay()).filter { !it.rv.fait && (sorte == null || it.rv.sorte == sorte) }
+        var fois = agenda.entre(debut.atStartOfDay(), fin.plusDays(1).atStartOfDay()).filter { !it.rv.estFait(it.prochain) && (sorte == null || it.rv.sorte == sorte) }
         if (debut == today) fois = fois.filter { it.rv.journee || !it.prochain.isBefore(maintenant.minusHours(1)) }
         if (moment != null) fois = fois.filter { f ->
             !f.rv.journee && f.prochain.hour.let { h -> when (moment) { "soir" -> h >= 17; "matin" -> h < 12; else -> h in 12..17 } }
