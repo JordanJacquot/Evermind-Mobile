@@ -10,6 +10,7 @@ import io.github.jordanjacquot.evermind.ui.enTexte
 import io.github.jordanjacquot.evermind.ui.enTexteLong
 import io.github.jordanjacquot.evermind.ui.majuscule
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDateTime
 import kotlin.math.floor
 import kotlin.math.roundToLong
@@ -93,6 +94,60 @@ fun rappelsEntre(tous: List<RendezVous>, de: LocalDateTime, a: LocalDateTime, r:
         }
     }
     return liste.sortedBy { it.moment }
+}
+
+/** Un rappel à donner maintenant (le plus récent dû pour cette fois du rendez-vous), et les clés de tous ceux qu'il remplace. */
+data class RappelADonner(val rappel: RappelPrevu, val cles: List<String>, val enRetard: Boolean)
+
+/** Un rappel ordinaire peut avoir jusqu'à 15 minutes de retard (l'alarme d'Android n'est pas toujours à la seconde). */
+const val RETARD_ORDINAIRE_MIN = 15L
+/** Après une coupure, on rattrape au plus 8 jours (le plus long rappel est une semaine avant). */
+const val RATTRAPAGE_JOURS = 8L
+
+/**
+ * Les rappels à donner maintenant, une seule fois chacun, un seul par fois d'un rendez-vous (le plus récent).
+ * Ceux dus depuis 15 minutes au plus ; et, pour un rendez-vous qui n'a pas encore commencé, ceux manqués depuis le
+ * dernier passage (téléphone éteint, redémarré et pas encore déverrouillé, alarme d'Android en retard) : ils sont donnés
+ * « en retard » au lieu d'être perdus. Un rendez-vous déjà commencé n'a pas de vieux rappel.
+ */
+fun rappelsADonner(tous: List<RendezVous>, dernier: LocalDateTime?, maintenant: LocalDateTime, r: ReglagesRappels,
+                   faits: Set<String>): List<RappelADonner> {
+    val recent = maintenant.minusMinutes(RETARD_ORDINAIRE_MIN)
+    // (une heure reculée met « dernier » dans le futur : on repart de maintenant, les clés évitent les doublons)
+    val depuis = dernier?.let { maxOf(minOf(it, maintenant), maintenant.minusDays(RATTRAPAGE_JOURS)) } ?: recent
+    fun pasCommence(p: RappelPrevu) =
+        if (p.rendezVous.journee) !p.fois.toLocalDate().isBefore(maintenant.toLocalDate()) else p.fois.isAfter(maintenant)
+    return rappelsEntre(tous, minOf(depuis, recent), maintenant, r)
+        .filter { it.cle !in faits }
+        .filter { it.moment.isAfter(recent) || (it.moment.isAfter(depuis) && pasCommence(it)) }
+        .groupBy { it.rendezVous.id to it.fois }
+        .values.map { dus ->
+            val p = dus.maxBy { it.moment }
+            RappelADonner(p, dus.map { it.cle }, enRetard = !p.moment.isAfter(recent))
+        }
+}
+
+/** « Dans 10 min » : le rappel de telle fois revient à tel instant (gardé pour survivre à un redémarrage du téléphone). */
+data class Report(val id: String, val fois: String, val quand: Instant) {
+    fun enTexte() = "$id|$fois|${quand.toEpochMilli()}"
+    companion object {
+        /** null pour une ligne abîmée. */
+        fun lire(texte: String): Report? {
+            val a = texte.indexOf('|')
+            val b = texte.lastIndexOf('|')
+            if (a <= 0 || b <= a + 1) return null
+            val ms = texte.substring(b + 1).toLongOrNull() ?: return null
+            return Report(texte.substring(0, a), texte.substring(a + 1, b), Instant.ofEpochMilli(ms))
+        }
+    }
+}
+
+/** Les reports gardés : ceux à donner tout de suite (l'heure est passée, depuis moins d'un jour) et ceux à remettre sur une alarme. */
+fun trierReports(textes: Set<String>, maintenant: Instant): Pair<List<Report>, List<Report>> {
+    val reports = textes.mapNotNull { Report.lire(it) }
+    val dus = reports.filter { !it.quand.isAfter(maintenant) && it.quand.isAfter(maintenant.minus(Duration.ofDays(1))) }
+    val aVenir = reports.filter { it.quand.isAfter(maintenant) }
+    return dus to aVenir
 }
 
 /** « dans 1 h », « dans 25 min », « demain », « c'est l'heure » (Get-TexteDans sur PC). */

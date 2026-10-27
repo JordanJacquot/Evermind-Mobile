@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 12 et après : même chose (sauvegarde du téléphone et passage d'un téléphone à l'autre) -->
+<!-- Android 12 et après : même chose que backup_rules.xml, pour la sauvegarde du téléphone (compte Google, chiffrée)
+     et pour le passage d'un téléphone à l'autre. L'agenda y est exprès : sans cela, un téléphone perdu ou changé ferait
+     perdre tous les rendez-vous. Les rappels se remettent en route seuls après la restauration (rappels/Sauvegarde.kt). -->
 <data-extraction-rules>
     <cloud-backup>
         <include domain="database" path="." />

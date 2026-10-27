@@ -2,8 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <!-- Internet sert seulement à télécharger les modèles de la voix (« Installer la voix », versions et empreintes
-         fixées) et à voir s'il existe une nouvelle version d'Evermind (la page des versions sur GitHub). Les
-         rendez-vous, la voix et ce qui est dit restent sur le téléphone. -->
+         fixées) et à voir s'il existe une nouvelle version d'Evermind (la page des versions sur GitHub). La voix et
+         ce qui est dit restent sur le téléphone. Les rendez-vous et les réglages font partie de la sauvegarde du
+         téléphone (compte Google, chiffrée ; voir res/xml/data_extraction_rules.xml) : c'est voulu, sinon un téléphone
+         perdu ou changé ferait perdre tout l'agenda. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- (le Wi-Fi ou pas : le nouveau modèle de l'assistant, 640 Mo, ne se télécharge tout seul qu'en Wi-Fi) -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -28,6 +30,8 @@
     <application
         android:name=".EvermindApp"
         android:allowBackup="true"
+        android:backupAgent=".rappels.Sauvegarde"
+        android:fullBackupOnly="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -69,6 +73,8 @@
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <!-- (Android 12 : le droit aux alarmes à l'heure exacte est rendu) -->
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
     </application>

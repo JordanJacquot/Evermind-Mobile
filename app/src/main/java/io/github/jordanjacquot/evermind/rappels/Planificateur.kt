@@ -13,6 +13,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -27,10 +28,11 @@ object Planificateur {
     const val ACTION_REPORTE = "io.github.jordanjacquot.evermind.REPORTE"
     const val EXTRA_ID = "id"
     const val EXTRA_FOIS = "fois"
+    private const val CLE_REPORTS = "reportes"
 
     private val verrou = Mutex()
 
-    /** Donne les rappels dus maintenant, puis règle l'alarme du suivant. */
+    /** Donne les rappels dus maintenant (et ceux manqués d'un rendez-vous pas encore commencé), puis règle l'alarme du suivant. */
     suspend fun passer(contexte: Context) = verrou.withLock {
         val app = contexte.applicationContext as EvermindApp
         val reglages = ReglagesRappels(contexte)
@@ -38,35 +40,64 @@ object Planificateur {
         val maintenant = LocalDateTime.now()
         val tous = app.depot.liste()
 
-        // Les rappels dus depuis le dernier passage (au plus 15 minutes en arrière : pas de vieux rappels
-        // après une longue coupure), une seule fois chacun ; plusieurs du même rendez-vous : un seul
+        // Les rappels dus depuis le dernier passage, une seule fois chacun ; plusieurs du même rendez-vous : un seul
         val dernier = prefs.getString("dernier", null)?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
-        val depuis = listOfNotNull(dernier, maintenant.minusMinutes(15)).max()
         val faits = prefs.getStringSet("cles", emptySet())!!.toMutableSet()
-        rappelsEntre(tous, depuis, maintenant, reglages)
-            .filter { it.cle !in faits }
-            .groupBy { it.rendezVous.id to it.fois }
-            .values.forEach { dus ->
-                dus.forEach { faits += it.cle }
-                val r = dus.maxBy { it.moment }
-                Notifications.rappel(contexte, r.rendezVous, r.fois, maintenant)
-            }
+        rappelsADonner(tous, dernier, maintenant, reglages, faits).forEach { d ->
+            faits += d.cles
+            Notifications.rappel(contexte, d.rappel.rendezVous, d.rappel.fois, maintenant, d.enRetard)
+        }
         // (on ne garde que les clés récentes)
         val limite = maintenant.minusDays(9).toString()
         faits.removeAll { cle -> cle.split('|').getOrNull(1)?.let { it < limite } ?: true }
-        prefs.edit().putString("dernier", maintenant.toString()).putStringSet("cles", faits).apply()
+
+        // Les « Dans 10 min » gardés : l'heure est passée (téléphone redémarré entre-temps), le rappel revient tout de
+        // suite ; sinon son alarme est remise (elle disparaît quand le téléphone redémarre)
+        val (dus, aVenir) = trierReports(prefs.getStringSet(CLE_REPORTS, emptySet())!!, Instant.now())
+        dus.forEach { rp ->
+            val fois = runCatching { LocalDateTime.parse(rp.fois) }.getOrNull() ?: return@forEach
+            tous.firstOrNull { it.id == rp.id }?.let { Notifications.rappel(contexte, it, fois, maintenant) }
+        }
+        aVenir.forEach { reglerReport(contexte, it) }
+        prefs.edit().putString("dernier", maintenant.toString()).putStringSet("cles", faits)
+            .putStringSet(CLE_REPORTS, aVenir.map { it.enTexte() }.toSet()).commit()
 
         // L'alarme du prochain rappel (on regarde 40 jours devant ; au-delà, l'alarme sert juste à revenir voir)
         val prochain = rappelsEntre(tous, maintenant, maintenant.plusDays(40), reglages).firstOrNull()?.moment
             ?: maintenant.plusDays(30)
-        regler(contexte, prochain, intention(contexte, ACTION_RAPPELS), 0)
+        regler(contexte, prochain.atZone(ZoneId.systemDefault()).toInstant(), intention(contexte, ACTION_RAPPELS), 0)
     }
 
-    /** « Dans 10 min » : le même rappel revient plus tard. */
-    fun plusTard(contexte: Context, id: String, fois: String, minutes: Long = 10) {
-        val i = intention(contexte, ACTION_REPORTE).putExtra(EXTRA_ID, id).putExtra(EXTRA_FOIS, fois)
-        regler(contexte, LocalDateTime.now().plusMinutes(minutes), i, (id + fois).hashCode())
+    /**
+     * « Dans 10 min » : le même rappel revient plus tard. Compté en temps réel (pas en heure du téléphone : la nuit du
+     * changement d'heure, il revient bien 10 minutes après), et gardé pour revenir même après un redémarrage.
+     */
+    suspend fun plusTard(contexte: Context, id: String, fois: String, minutes: Long = 10) = verrou.withLock {
+        val rp = Report(id, fois, Instant.now().plusSeconds(minutes * 60))
+        val prefs = contexte.getSharedPreferences("rappels-faits", Context.MODE_PRIVATE)
+        val gardes = prefs.getStringSet(CLE_REPORTS, emptySet())!!.filter { Report.lire(it)?.let { r -> r.id == id && r.fois == fois } != true }
+        prefs.edit().putStringSet(CLE_REPORTS, (gardes + rp.enTexte()).toSet()).commit()
+        reglerReport(contexte, rp)
     }
+
+    /** L'alarme d'un « Dans 10 min » a sonné : il n'est plus à garder. */
+    suspend fun reportDonne(contexte: Context, id: String, fois: String) = verrou.withLock {
+        val prefs = contexte.getSharedPreferences("rappels-faits", Context.MODE_PRIVATE)
+        val gardes = prefs.getStringSet(CLE_REPORTS, emptySet())!!.filter { Report.lire(it)?.let { r -> r.id == id && r.fois == fois } != true }
+        prefs.edit().putStringSet(CLE_REPORTS, gardes.toSet()).commit()
+    }
+
+    private fun reglerReport(contexte: Context, rp: Report) {
+        val i = intention(contexte, ACTION_REPORTE).putExtra(EXTRA_ID, rp.id).putExtra(EXTRA_FOIS, rp.fois)
+        regler(contexte, rp.quand, i, (rp.id + rp.fois).hashCode())
+    }
+
+    /**
+     * Juste après une restauration (nouveau téléphone, sauvegarde Google) : Evermind n'est pas encore lancé, aucune
+     * alarme n'est posée. Une alarme dans une minute le réveille, et il pose alors celles de tous les rappels.
+     */
+    fun revenirBientot(contexte: Context) =
+        regler(contexte, Instant.now().plusSeconds(60), intention(contexte, ACTION_RAPPELS), 0)
 
     /** Refaire le planning en arrière-plan (après un changement). */
     fun reprogrammer(contexte: Context) {
@@ -77,10 +108,10 @@ object Planificateur {
     private fun intention(contexte: Context, action: String) =
         Intent(contexte, RecepteurRappels::class.java).setAction(action)
 
-    private fun regler(contexte: Context, quand: LocalDateTime, intent: Intent, code: Int) {
+    private fun regler(contexte: Context, quand: Instant, intent: Intent, code: Int) {
         val alarmes = contexte.getSystemService(AlarmManager::class.java)
         val pi = PendingIntent.getBroadcast(contexte, code, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val t = quand.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        val t = quand.toEpochMilli()
         // À l'heure exacte quand Android le permet (Android 13 et après : toujours, pour un agenda) ;
         // sinon à quelques minutes près
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmes.canScheduleExactAlarms()) {
@@ -107,7 +138,9 @@ class RecepteurRappels : BroadcastReceiver() {
                     Planificateur.ACTION_REPORTE -> {
                         val app = contexte.applicationContext as EvermindApp
                         val id = intent.getStringExtra(Planificateur.EXTRA_ID) ?: return@launch
-                        val fois = intent.getStringExtra(Planificateur.EXTRA_FOIS)?.let { LocalDateTime.parse(it) } ?: return@launch
+                        val texte = intent.getStringExtra(Planificateur.EXTRA_FOIS) ?: return@launch
+                        Planificateur.reportDonne(contexte, id, texte)
+                        val fois = runCatching { LocalDateTime.parse(texte) }.getOrNull() ?: return@launch
                         app.depot.liste().firstOrNull { it.id == id }?.let { Notifications.rappel(contexte, it, fois, LocalDateTime.now()) }
                     }
                     else -> Planificateur.passer(contexte)
@@ -119,7 +152,10 @@ class RecepteurRappels : BroadcastReceiver() {
     }
 }
 
-/** Le téléphone redémarre, l'heure change, Evermind est mis à jour : les alarmes sont à refaire. */
+/**
+ * Le téléphone redémarre, l'heure change, Evermind est mis à jour, Android rend le droit aux alarmes à l'heure
+ * exacte : les alarmes sont à refaire.
+ */
 class RecepteurDemarrage : BroadcastReceiver() {
     override fun onReceive(contexte: Context, intent: Intent) {
         val fin = goAsync()

@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Android 11 et avant : l'agenda fait partie de la sauvegarde du téléphone (chiffrée, sur le compte de l'utilisateur) -->
+<!-- Android 11 et avant : l'agenda (la base) et les réglages font partie de la sauvegarde du téléphone (compte Google,
+     chiffrée). Voulu : un téléphone perdu ou changé ne fait pas perdre l'agenda. Les modèles de la voix et de
+     l'assistant (files) et le cache n'y sont pas : ils se retéléchargent. Après une restauration, les rappels se
+     remettent en route seuls (rappels/Sauvegarde.kt). -->
 <full-backup-content>
     <include domain="database" path="." />
     <include domain="sharedpref" path="." />

@@ -11,24 +11,24 @@ import io.github.jordanjacquot.evermind.ui.agenda.AgendaEcran
 import io.github.jordanjacquot.evermind.ui.fiche.FicheEcran
 import io.github.jordanjacquot.evermind.ui.formulaire.FormulaireEcran
 import io.github.jordanjacquot.evermind.ui.reglages.ReglagesEcran
-import java.net.URLEncoder
 import io.github.jordanjacquot.evermind.donnees.FormatDate
 import java.time.LocalDate
 import java.time.LocalDateTime
 
 /** Les écrans de l'app et comment on passe de l'un à l'autre. */
 @Composable
-fun EvermindNavigation(ficheDemandee: String? = null, ficheOuverte: () -> Unit = {}) {
+fun EvermindNavigation(ficheDemandee: FicheDemandee? = null, ficheOuverte: () -> Unit = {}) {
     val nav = rememberNavController()
     LaunchedEffect(ficheDemandee) {
-        if (ficheDemandee != null) { nav.navigate("fiche/$ficheDemandee"); ficheOuverte() }
+        // (une adresse qui ne mène nulle part laisse l'agenda ouvert, au lieu de faire planter l'appli)
+        if (ficheDemandee != null) { runCatching { nav.navigate(routeFiche(ficheDemandee.id, ficheDemandee.fois)) }; ficheOuverte() }
     }
     NavHost(navController = nav, startDestination = "agenda") {
         composable("agenda") {
             AgendaEcran(
-                ouvrirFiche = { id, fois -> nav.navigate("fiche/$id" + (fois?.let { "?fois=${it.format(FormatDate)}" } ?: "")) },
+                ouvrirFiche = { id, fois -> nav.navigate(routeFiche(id, fois)) },
                 ajouter = { jour -> nav.navigate("formulaire?jour=${jour ?: ""}") },
-                completer = { phrase -> nav.navigate("formulaire?phrase=${URLEncoder.encode(phrase, "UTF-8")}") },
+                completer = { phrase -> nav.navigate(routeCompleter(phrase)) },
                 reglages = { nav.navigate("reglages") },
             )
         }
@@ -46,7 +46,7 @@ fun EvermindNavigation(ficheDemandee: String? = null, ficheOuverte: () -> Unit =
                 id = id,
                 fois = entree.arguments?.getString("fois")?.let { runCatching { LocalDateTime.parse(it, FormatDate) }.getOrNull() },
                 retour = { nav.popBackStack() },
-                modifier = { nav.navigate("formulaire?id=$id") },
+                modifier = { nav.navigate(routeModifier(id)) },
             )
         }
         composable(

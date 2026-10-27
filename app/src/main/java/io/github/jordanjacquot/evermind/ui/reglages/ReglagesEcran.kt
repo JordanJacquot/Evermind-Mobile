@@ -70,6 +70,15 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import io.github.jordanjacquot.evermind.rappels.Notifications
+import io.github.jordanjacquot.evermind.rappels.Autoriser
+import io.github.jordanjacquot.evermind.rappels.commentAutoriser
+import io.github.jordanjacquot.evermind.rappels.refusSansFenetre
+import androidx.activity.compose.LocalActivity
+import androidx.core.app.ActivityCompat
+import androidx.compose.runtime.DisposableEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import io.github.jordanjacquot.evermind.rappels.Planificateur
 import io.github.jordanjacquot.evermind.rappels.ReglagesRappels
 import androidx.compose.runtime.rememberCoroutineScope
@@ -100,7 +109,33 @@ fun ReglagesEcran(retour: () -> Unit) {
     var matin by remember { mutableStateOf(rappels.matin) }
     var heureAvant by remember { mutableStateOf(rappels.heureAvant) }
     var notificationsPermises by remember { mutableStateOf(Notifications.permises(app)) }
-    val demande = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { notificationsPermises = it }
+    val activite = LocalActivity.current
+    val prefsRappels = remember { app.getSharedPreferences("rappels", android.content.Context.MODE_PRIVATE) }
+    var demandeA by remember { mutableStateOf(0L) }
+    val demande = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
+        notificationsPermises = Notifications.permises(app)
+        // (refusé sans que la fenêtre d'Android ait pu s'afficher : les réglages du téléphone)
+        if (!ok && refusSansFenetre(System.currentTimeMillis() - demandeA)) Notifications.ouvrirReglages(app)
+    }
+    fun autoriser() {
+        val explique = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && activite != null &&
+            ActivityCompat.shouldShowRequestPermissionRationale(activite, Manifest.permission.POST_NOTIFICATIONS)
+        when (commentAutoriser(Build.VERSION.SDK_INT, prefsRappels.getBoolean("notifications-demandees", false), explique)) {
+            Autoriser.DEMANDER -> {
+                prefsRappels.edit().putBoolean("notifications-demandees", true).apply()
+                demandeA = System.currentTimeMillis()
+                demande.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            Autoriser.REGLAGES -> Notifications.ouvrirReglages(app)
+        }
+    }
+    // Retour des réglages du téléphone : l'avertissement disparaît si les notifications sont permises
+    val cycle = LocalLifecycleOwner.current
+    DisposableEffect(cycle) {
+        val observateur = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_RESUME) notificationsPermises = Notifications.permises(app) }
+        cycle.lifecycle.addObserver(observateur)
+        onDispose { cycle.lifecycle.removeObserver(observateur) }
+    }
     val scope = rememberCoroutineScope()
     val etatVoix by voix.installation.etat(Pack.VOIX).collectAsStateWithLifecycle()
     val etatEveil by voix.installation.etat(Pack.EVEIL).collectAsStateWithLifecycle()
@@ -183,15 +218,16 @@ fun ReglagesEcran(retour: () -> Unit) {
                 if (!notificationsPermises) {
                     Text("Evermind n'a pas le droit d'envoyer des notifications : aucun rappel ne s'affichera.",
                         color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        BoutonAccent("Autoriser les notifications", { demande.launch(Manifest.permission.POST_NOTIFICATIONS) }, Modifier.padding(vertical = 6.dp))
-                    }
+                    BoutonAccent("Autoriser les notifications", { autoriser() }, Modifier.padding(vertical = 6.dp))
                 }
                 Ligne("La veille à 20 h", veille) { veille = it; rappels.veille = it; Planificateur.reprogrammer(app) }
                 Ligne("Le matin même à 8 h", matin) { matin = it; rappels.matin = it; Planificateur.reprogrammer(app) }
                 Ligne("1 h avant", heureAvant) { heureAvant = it; rappels.heureAvant = it; Planificateur.reprogrammer(app) }
                 Text("Les choses à faire avec une heure sont rappelées à l'heure même.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Tes rendez-vous sont gardés dans la sauvegarde du téléphone (celle de ton compte Google, si elle est " +
+                    "activée). Sur un nouveau téléphone, ils reviennent avec elle. Si un rappel manque après ce changement, ouvre Evermind une fois.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
             }
 
             if (onglet == 2) Section("La voix", "Pour parler à Evermind comme sur PC : la dictée Whisper et la voix naturelle Kokoro. Téléchargées une seule fois, ensuite tout marche sans Internet et rien ne quitte le téléphone.") {
